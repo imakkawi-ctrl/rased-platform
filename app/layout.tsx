@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ر��صد — منصة تحليل النةائج المدرسية',
+  title: 'راصد — منصة تحليل النتائج المدرسية',
   description: 'منصة تحليل النتائج المدرسية للمدارس',
 }
 
