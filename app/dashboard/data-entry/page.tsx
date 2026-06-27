@@ -83,8 +83,8 @@ export default function DataEntryPage() {
           <div style={{background:'var(--panel)', border:'1px solid var(--line)', borderRadius:16, padding:20, marginBottom:16}}>
             <h3 style={{fontWeight:700, marginBottom:16, fontSize:15}}>👤 بيانات الطالب</h3>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-              <div><label style={lbl}>اسم اقمصل</label><input style={inp} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required placeholder="مإحمد أحمد" /></div>
-              <div><label style={lbl}>اقمصل / الشعبة</label><input style={inp} value={form.class} onChange={e=>setForm({...form,class:e.target.value})} required placeholder="1أ" /></div>
+              <div><label style={lbl}>اسم الطالب</label><input style={inp} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} required placeholder="محمد أحمد" /></div>
+              <div><label style={lbl}>الفصل / الشعبة</label><input style={inp} value={form.class} onChange={e=>setForm({...form,class:e.target.value})} required placeholder="1أ" /></div>
               <div><label style={lbl}>الصف</label>
                 <select style={inp} value={form.grade} onChange={e=>setForm({...form,grade:e.target.value})}>
                   {GRADES.map(g=><option key={g} value={g}>{g}</option>)}
@@ -95,12 +95,12 @@ export default function DataEntryPage() {
                   {STAGES.map(s=><option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div><label style={lbl}>اقمصل الدراسي</label>
+              <div><label style={lbl}>الفصل الدراسي</label>
                 <select style={inp} value={form.semester} onChange={e=>setForm({...form,semester:e.target.value})}>
                   <option>الفصل الأول</option><option>الفصل الثاني</option><option>الفصل الثالث</option>
                 </select>
               </div>
-              <div><label style={lbl}>اقمصل الدراسي</label><input style={inp} value={form.year} onChange={e=>setForm({...form,year:e.target.value})} placeholder="2025" /></div>
+              <div><label style={lbl}>العام الدراسي</label><input style={inp} value={form.year} onChange={e=>setForm({...form,year:e.target.value})} placeholder="2025" /></div>
             </div>
           </div>
 
@@ -108,12 +108,12 @@ export default function DataEntryPage() {
           {SUBJECTS.map(subj => (
             <div key={subj} style={{background:'var(--panel)', border:'1px solid var(--line)', borderRadius:16, padding:20, marginBottom:16}}>
               <h3 style={{fontWeight:700, marginBottom:16, fontSize:15}}>
-                {subj==='Arabic Language'?'🗣 اللغة اقعربية':subj==='Islamic Studies'?'📖 الدراسات الإسلامية':'🌍 اقمدذة الاجتماعية'}
+                {subj==='Arabic Language'?'🗣 اللغة العربية':subj==='Islamic Studies'?'📖 الدراسات الإسلامية':'🌍 الدراسات الاجتماعية'}
               </h3>
               <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10}}>
                 {(['q1','q2','q3','q4'] as const).map(q=>(
                   <div key={q}>
-                    <label style={lbl}>{q==='q1'?'الاخبار 1':q==='q2'?'اقاخبال 2'���tq'==='q3'?'الاخبار 3':'اقاخبال 4'}</label>
+                    <label style={lbl}>{q==='q1'?'الاختبار 1':q==='q2'?'الاختبار 2':q==='q3'?'الاختبار 3':'الاختبار 4'}</label>
                     <input style={inp} type="number" min="0" max="100" step="0.5"
                       value={scores[subj][q]}
                       onChange={e=>setScores({...scores,[subj]:{...scores[subj],[q]:e.target.value}})}
