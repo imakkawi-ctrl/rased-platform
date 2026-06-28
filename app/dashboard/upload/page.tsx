@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -18,10 +18,29 @@ interface ParsedData {
   meta: { semester?: string; year?: string; grades: string[] }
 }
 
+function parseCSV(text: string): Record<string, string>[] {
+  const lines = text.trim().split('\n')
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+  return lines.slice(1).map(line => {
+    const vals: string[] = []
+    let cur = '', inQ = false
+    for (const ch of line) {
+      if (ch === '"') inQ = !inQ
+      else if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = '' }
+      else cur += ch
+    }
+    vals.push(cur.trim())
+    const row: Record<string,string> = {}
+    headers.forEach((h,i) => row[h] = (vals[i]||'').replace(/^"|"$/g,''))
+    return row
+  }).filter(r => Object.values(r).some(v => v))
+}
+
 function parseGradesSheet(rows: Record<string, any>[]): Pick<ParsedData,'students'|'subjects'|'meta'> {
   const allKeys     = Object.keys(rows[0] || {})
   const subjectCols = allKeys.filter(k => /^.+-Q[1-4]$/i.test(k.trim()))
-  if (!subjectCols.length) throw new Error('لم تُكتشف أعمدة المواد — تأكد من الصيغة: "Math-Q1"')
+  if (!subjectCols.length) throw new Error('لم تجد أعمدة المواد — تأكد من التنسيق: "Math-Q1"')
   const subjects     = Array.from(new Set(subjectCols.map(k => k.replace(/-Q[1-4]$/i,'').trim())))
   const uniqueGrades = Array.from(new Set(rows.map((r:any)=>String(r['Grade']||r['grade']||'').trim()).filter(Boolean)))
   const uniqueSem    = Array.from(new Set(rows.map((r:any)=>String(r['Semester']||r['semester']||'').trim()).filter(Boolean)))
@@ -68,46 +87,56 @@ function parseTargetsSheet(rows: Record<string,any>[]): TargetRecord[] {
   })).filter(t=>t.subject)
 }
 
-async function parseFile(f: File): Promise<ParsedData> {
-  const XLSX = await import('xlsx')
-  const buf  = await f.arrayBuffer()
-  if (f.name.toLowerCase().endsWith('.csv')) {
-    const wb=XLSX.read(buf,{type:'array',raw:false})
-    const rows=XLSX.utils.sheet_to_json<Record<string,any>>(wb.Sheets[wb.SheetNames[0]],{defval:''})
-    if (!rows.length) throw new Error('الملف فارغ')
-    return {...parseGradesSheet(rows),teachers:[],targets:[]}
-  }
-  const wb=XLSX.read(buf,{type:'array'})
-  const gradesKey  =wb.SheetNames.find(n=>/grade|student/i.test(n))||wb.SheetNames[0]
-  const teachersKey=wb.SheetNames.find(n=>/teacher/i.test(n))
-  const targetsKey =wb.SheetNames.find(n=>/target/i.test(n))
-  const gradesRows =XLSX.utils.sheet_to_json<Record<string,any>>(wb.Sheets[gradesKey],{defval:''})
-  if (!gradesRows.length) throw new Error('شيت الدرجات فارغة')
-  const gradeData=parseGradesSheet(gradesRows)
-  const teachers=teachersKey?parseTeachersSheet(XLSX.utils.sheet_to_json<Record<string,any>>(wb.Sheets[teachersKey],{defval:''})):[]
-  const targets =targetsKey ?parseTargetsSheet( XLSX.utils.sheet_to_json<Record<string,any>>(wb.Sheets[targetsKey], {defval:''})):[]
-  return {...gradeData,teachers,targets}
+function extractSheetId(url: string): string | null {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/)
+  return m ? m[1] : null
+}
+
+async function fetchSheetCSV(id: string, sheetName: string): Promise<Record<string,string>[]> {
+  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`
+  const r = await fetch(url)
+  if (!r.ok) return []
+  const text = await r.text()
+  if (text.includes('Error') || text.trim().length < 10) return []
+  return parseCSV(text)
+}
+
+async function parseGoogleSheet(url: string): Promise<ParsedData> {
+  const id = extractSheetId(url)
+  if (!id) throw new Error('رابط Google Sheets غير صحيح')
+  const [gradesRows, teachersRows, targetsRows] = await Promise.all([
+    fetchSheetCSV(id, 'Grades'),
+    fetchSheetCSV(id, 'Teachers'),
+    fetchSheetCSV(id, 'Targets'),
+  ])
+  if (!gradesRows.length) throw new Error('تأكد أن الشيت مشارك (Anyone with the link) وأن تاب Grades موجود')
+  const gradeData = parseGradesSheet(gradesRows)
+  const teachers  = parseTeachersSheet(teachersRows)
+  const targets   = parseTargetsSheet(targetsRows)
+  return {...gradeData, teachers, targets}
 }
 
 export default function UploadPage() {
-  const [file,setFile]       = useState<File|null>(null)
-  const [loading,setLoading] = useState(false)
-  const [error,setError]     = useState('')
-  const [success,setSuccess] = useState(false)
-  const [parsed,setParsed]   = useState<ParsedData|null>(null)
-  const fileRef  = useRef<HTMLInputElement>(null)
+  const [url,setUrl]           = useState('')
+  const [loading,setLoading]   = useState(false)
+  const [error,setError]       = useState('')
+  const [success,setSuccess]   = useState(false)
+  const [parsed,setParsed]     = useState<ParsedData|null>(null)
+  const [fetching,setFetching] = useState(false)
   const router   = useRouter()
   const supabase = createClient()
 
-  async function handleFile(f:File) {
-    if (!f.name.match(/\.(xlsx|xls|csv)$/i)){setError('xlsx أو csv فقط');return}
-    setFile(f);setError('');setParsed(null)
-    try{setParsed(await parseFile(f))}catch(err:any){setError(err.message)}
+  async function handleFetch() {
+    if (!url.trim()) return
+    setFetching(true); setError(''); setParsed(null)
+    try { setParsed(await parseGoogleSheet(url.trim())) }
+    catch(e:any) { setError(e.message) }
+    finally { setFetching(false) }
   }
 
   async function handleUpload() {
-    if (!file||!parsed) return
-    setLoading(true);setError('')
+    if (!parsed) return
+    setLoading(true); setError('')
     try {
       const {data:{user}}=await supabase.auth.getUser()
       if (!user){router.push('/auth/login');return}
@@ -116,7 +145,7 @@ export default function UploadPage() {
       if (!schoolId) throw new Error('لم يتم تعيين مدرسة لهذا الحساب')
       await supabase.from('school_data').delete().eq('school_id',schoolId)
       const {error:dbErr}=await supabase.from('school_data').insert({
-        school_id:schoolId, file_name:file.name,
+        school_id:schoolId, file_name:'google_sheet',
         headers:['name','grade','class','stage','semester','year',...parsed.subjects],
         rows:    parsed.students as any,
         config:  {format:'v2',subjects:parsed.subjects,meta:parsed.meta,risk:60,defaultTarget:80,teachers:parsed.teachers,targets:parsed.targets},
@@ -124,7 +153,7 @@ export default function UploadPage() {
       if (dbErr) throw new Error(dbErr.message)
       setSuccess(true)
       setTimeout(()=>router.push('/dashboard/analytics'),1500)
-    }catch(err:any){setError(err.message)}
+    }catch(e:any){setError(e.message)}
     finally{setLoading(false)}
   }
 
@@ -132,16 +161,16 @@ export default function UploadPage() {
   const panel:React.CSSProperties={background:'var(--panel)',border:'1px solid var(--line)',borderRadius:16,padding:28,marginBottom:20}
   const errBox:React.CSSProperties={background:'rgba(248,113,113,.12)',border:'1px solid #f87171',color:'#f87171',borderRadius:10,padding:'12px 16px',fontSize:13,marginBottom:16}
   const btn:React.CSSProperties={background:'linear-gradient(135deg,#5b8cff,#7c5cff)',color:'#fff',border:'none',borderRadius:12,padding:'13px 32px',fontSize:15,fontWeight:700,cursor:'pointer',width:'100%',marginTop:16,fontFamily:'inherit'}
+  const inp:React.CSSProperties={width:'100%',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:10,padding:'12px 16px',fontSize:14,color:'var(--txt)',fontFamily:'inherit',boxSizing:'border-box',marginBottom:12}
   const tag:React.CSSProperties={display:'inline-block',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:6,padding:'2px 9px',fontSize:11,margin:'2px',color:'var(--txt-dim)'}
   const statBox:React.CSSProperties={background:'var(--bg)',borderRadius:10,padding:'14px 16px'}
-  const dropStyle=(active:boolean):React.CSSProperties=>({border:`2px dashed ${active?'#5b8cff':'var(--line)'}`,borderRadius:14,padding:'40px 20px',textAlign:'center',cursor:'pointer',background:active?'rgba(91,140,255,.04)':'transparent',transition:'all .2s'})
 
   if (success) return (
     <div style={{...pg,display:'grid',placeItems:'center'}}>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:72,marginBottom:20}}>&#x2705;</div>
         <h2 style={{fontSize:22,fontWeight:800,marginBottom:8}}>تم رفع البيانات بنجاح!</h2>
-        <p style={{color:'var(--txt-dim)'}}>جارس الانتقال...</p>
+        <p style={{color:'var(--txt-dim)'}}>جارٍ الانتقال...</p>
       </div>
     </div>
   )
@@ -151,44 +180,35 @@ export default function UploadPage() {
       <div style={{maxWidth:780,margin:'0 auto'}}>
         <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>← العودة</button>
         <h1 style={{fontSize:24,fontWeight:800,marginBottom:4}}>رفع بيانات الطلاب</h1>
-        <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>ملف Excel بـ 3 تابات: الدرجات + المعلمين + الأهداف</p>
+        <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>ربط مع Google Sheets — الصق رابط الشيت أدناه</p>
 
         <div style={panel}>
-          <h3 style={{fontSize:16,fontWeight:700,marginBottom:8}}>الخطوة 1 — تحميل القالب</h3>
-          <a href="/rased_template_v2.xlsx" download="rased_template_v2.xlsx" style={{display:'inline-flex',alignItems:'center',gap:8,background:'var(--bg)',border:'1px solid var(--line)',color:'var(--txt)',borderRadius:10,padding:'10px 18px',fontSize:14,fontWeight:700,textDecoration:'none',marginBottom:12}}>
-            &#x1F4E5; قالب راصد v2 (3 تابات)
-          </a>
-          <div style={{background:'var(--bg)',borderRadius:10,padding:'12px 16px',fontSize:12,color:'var(--txt-dim)',lineHeight:2}}>
-            <div><strong style={{color:'var(--txt)'}}>Grades:</strong> School, Name, Grade, Class, Stage, Semester, Year, Math-Q1, Math-Q2...</div>
-            <div><strong style={{color:'var(--txt)'}}>Teachers:</strong> Teacher Name, Subject, Section 1, Section 2...</div>
-            <div><strong style={{color:'var(--txt)'}}>Targets:</strong> Subject, Target (%), Academic Year</div>
+          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 1 — جهّز Google Sheet</h3>
+          <div style={{background:'var(--bg)',borderRadius:10,padding:'14px 16px',fontSize:13,color:'var(--txt-dim)',lineHeight:2.2}}>
+            <div>📋 <strong style={{color:'var(--txt)'}}>نسخ القالظ:</strong> <a href="https://docs.google.com/spreadsheets/d/1example/copy" target="_blank" rel="noreferrer" style={{color:'#5b8cff'}}>انقر هنا لنسخ قالب راصد</a></div>
+            <div>👁 <strong style={{color:'var(--txt)'}}>المشاركة:</strong> File → Share → Anyone with the link → Viewer</div>
+            <div>📊 <strong style={{color:'var(--txt)'}}>التابات المطلوبة:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
           </div>
         </div>
 
         <div style={panel}>
-          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 2 — رفع الملف</h3>
-          {error && <div style={errBox}>&#x26A0;&#xFE0F; {error}</div>}
-          <div style={dropStyle(!!file)} onClick={()=>fileRef.current?.click()} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile(f)}}>
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)handleFile(f)}} />
-            {file?(
-              <div>
-                <div style={{fontSize:36,marginBottom:8}}>&#x1F4CA;</div>
-                <p style={{fontWeight:700}}>{file.name}</p>
-                <p style={{color:'var(--txt-dim)',fontSize:13}}>{(file.size/1024).toFixed(1)} KB</p>
-              </div>
-            ):(
-              <div>
-                <div style={{fontSize:48,marginBottom:12}}>&#x1F4C2;</div>
-                <p style={{fontWeight:700,marginBottom:6}}>اسحب ملف هنا أو انقر</p>
-                <p style={{color:'var(--txt-dim)',fontSize:13}}>xlsx - xls - csv</p>
-              </div>
-            )}
-          </div>
+          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 2 — الصق رابط الشيت</h3>
+          {error && <div style={errBox}>⚠️ {error}</div>}
+          <input
+            style={inp}
+            placeholder="https://docs.google.com/spreadsheets/d/..."
+            value={url}
+            onChange={e=>setUrl(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&handleFetch()}
+          />
+          <button style={{...btn,marginTop:0,opacity:fetching?0.7:1}} onClick={handleFetch} disabled={fetching||!url.trim()}>
+            {fetching ? '⏳ جارٍ قراءة الشيت...' : '🔗 قراءة البيانات'}
+          </button>
         </div>
 
         {parsed && (
           <div style={panel}>
-            <h3 style={{fontSize:16,fontWeight:700,marginBottom:16}}>معاينة الملف</h3>
+            <h3 style={{fontSize:16,fontWeight:700,marginBottom:16}}>معاينة البيانات ✅</h3>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
               <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>الطلاب</div><div style={{fontSize:26,fontWeight:800,color:'#5b8cff'}}>{parsed.students.length}</div></div>
               <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>المواد</div><div style={{fontSize:26,fontWeight:800,color:'#7c5cff'}}>{parsed.subjects.length}</div></div>
@@ -202,7 +222,7 @@ export default function UploadPage() {
             {parsed.teachers.length>0&&(
               <div style={{marginBottom:12}}>
                 <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>المعلمون:</p>
-                <div>{parsed.teachers.map(t=><span key={t.name+t.subject} style={{...tag,color:'#34d399',borderColor:'#34d399'}}>{t.name} - {t.subject} ({t.sections.join(', ')})</span>)}</div>
+                <div>{parsed.teachers.map(t=><span key={t.name+t.subject} style={{...tag,color:'#34d399',borderColor:'#34d399'}}>{t.name} - {t.subject}</span>)}</div>
               </div>
             )}
             {parsed.targets.length>0&&(
@@ -211,4 +231,12 @@ export default function UploadPage() {
                 <div>{parsed.targets.map(t=><span key={t.subject} style={{...tag,color:'#fbbf24',borderColor:'#fbbf24'}}>{t.subject}: {t.target}%</span>)}</div>
               </div>
             )}
-            <button style
+            <button style={btn} onClick={handleUpload} disabled={loading}>
+              {loading ? 'جارٍ الحفظ...' : `حفظ ${parsed.students.length} طالب وفتح التحليل`}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
