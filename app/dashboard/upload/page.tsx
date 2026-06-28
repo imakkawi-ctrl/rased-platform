@@ -111,9 +111,12 @@ export default function UploadPage() {
     try {
       const {data:{user}}=await supabase.auth.getUser()
       if (!user){router.push('/auth/login');return}
-      await supabase.from('school_data').delete().eq('school_id',user.id)
+      const {data:profile}=await supabase.from('user_profiles').select('school_id').eq('id',user.id).single()
+      const schoolId=profile?.school_id
+      if (!schoolId) throw new Error('لم يتم تعيين مدرسة لهذا الحساب')
+      await supabase.from('school_data').delete().eq('school_id',schoolId)
       const {error:dbErr}=await supabase.from('school_data').insert({
-        school_id:user.id, file_name:file.name,
+        school_id:schoolId, file_name:file.name,
         headers:['name','grade','class','stage','semester','year',...parsed.subjects],
         rows:    parsed.students as any,
         config:  {format:'v2',subjects:parsed.subjects,meta:parsed.meta,risk:60,defaultTarget:80,teachers:parsed.teachers,targets:parsed.targets},
@@ -208,12 +211,4 @@ export default function UploadPage() {
                 <div>{parsed.targets.map(t=><span key={t.subject} style={{...tag,color:'#fbbf24',borderColor:'#fbbf24'}}>{t.subject}: {t.target}%</span>)}</div>
               </div>
             )}
-            <button style={btn} onClick={handleUpload} disabled={loading}>
-              {loading?'جارس الرفع...':`رفع ${parsed.students.length} طالب وفتح التحليل`}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+            <button style
