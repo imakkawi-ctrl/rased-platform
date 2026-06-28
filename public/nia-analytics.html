@@ -1,199 +1,869 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" data-theme="dark" dir="ltr">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>راصد — لوحة تحليل النتائج</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>راصد · منصة تحليل النتائج</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
-:root{--bg:#0f1117;--panel:#1a1d27;--line:#2a2d3e;--txt:#e8eaf0;--dim:#8b8fa8;--blue:#5b8cff;--purple:#7c5cff;--green:#34d399;--yellow:#fbbf24;--red:#f87171;}
+:root{
+  --bg:#0b1020; --bg-2:#111834; --panel:#151d3b; --panel-2:#1b2547;
+  --line:#26315c; --txt:#e8edff; --txt-dim:#9aa6cf; --txt-mut:#6b78a8;
+  --brand:#5b8cff; --brand-2:#7c5cff; --accent:#22d3ee;
+  --good:#34d399; --warn:#fbbf24; --bad:#f87171; --gold:#facc15;
+  --shadow:0 10px 40px rgba(0,0,0,.45); --radius:16px;
+  --grad:linear-gradient(135deg,#5b8cff 0%,#7c5cff 60%,#22d3ee 130%);
+}
+html[data-theme="light"]{
+  --bg:#eef1f9; --bg-2:#e3e8f6; --panel:#ffffff; --panel-2:#f5f7ff;
+  --line:#dfe4f3; --txt:#1a2138; --txt-dim:#5a6485; --txt-mut:#8a93b5;
+  --brand:#3b6fe0; --brand-2:#6d4bff; --accent:#0ea5b7; --shadow:0 8px 30px rgba(40,60,120,.12);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-size:14px}
-#loading{display:grid;place-items:center;min-height:100vh;font-size:18px;color:var(--dim)}
-#app{display:none;flex-direction:column;min-height:100vh}
-header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.logo{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--blue),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-#schoolName{color:var(--dim);font-size:13px}
-#uploadLink{display:none;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;padding:8px 20px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:700}
-main{padding:24px;max-width:1200px;margin:0 auto;width:100%}
-.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
-select{background:var(--panel);border:1px solid var(--line);color:var(--txt);padding:8px 14px;border-radius:10px;font-family:inherit;font-size:13px;cursor:pointer}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center}
-.stat-label{font-size:11px;color:var(--dim);font-weight:700;margin-bottom:6px}
-.stat-value{font-size:32px;font-weight:800}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
-@media(max-width:700px){.grid2{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
-.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:var(--dim)}
-.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px}
-.bar-row span:first-child{width:90px;text-align:right;flex-shrink:0;color:var(--dim)}
-.bar-track{flex:1;background:var(--line);border-radius:6px;height:10px}
-.bar-fill{height:10px;border-radius:6px;transition:width .5s}
-.bar-row .pct{width:36px;text-align:left;font-weight:700}
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{background:var(--bg);padding:10px 12px;text-align:right;color:var(--dim);font-weight:700;border-bottom:1px solid var(--line)}
-td{padding:9px 12px;border-bottom:1px solid var(--line)}
-tr:hover td{background:rgba(91,140,255,.05)}
-.badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:700}
-.red{background:rgba(248,113,113,.15);color:var(--red)}
-.green{background:rgba(52,211,153,.15);color:var(--green)}
-.yellow{background:rgba(251,191,36,.15);color:var(--yellow)}
-#emptyMsg{display:none;text-align:center;padding:60px 20px;color:var(--dim);font-size:16px}
+body{font-family:'Segoe UI','Tahoma',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--txt);display:flex;min-height:100vh;transition:background .4s,color .4s}
+html[dir="rtl"] body{font-family:'Tahoma','Segoe UI',sans-serif}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+.sidebar{width:252px;flex-shrink:0;background:var(--bg-2);border-inline-end:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;transition:.3s}
+.brand{padding:20px 18px;display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--line)}
+.brand-logo{width:40px;height:40px;border-radius:11px;background:var(--grad);display:grid;place-items:center;font-weight:800;color:#fff;font-size:17px;box-shadow:0 6px 18px rgba(91,140,255,.4)}
+.brand-txt b{font-size:15px;letter-spacing:.3px}.brand-txt span{display:block;font-size:10.5px;color:var(--txt-mut);letter-spacing:1.5px;text-transform:uppercase}
+.nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-group{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--txt-mut);padding:14px 12px 6px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;cursor:pointer;color:var(--txt-dim);font-size:13.5px;font-weight:500;transition:.18s;margin-bottom:2px}
+.nav-item:hover{background:var(--panel);color:var(--txt)}
+.nav-item.active{background:var(--grad);color:#fff;box-shadow:0 6px 16px rgba(91,140,255,.35)}
+.nav-item .ic{width:18px;text-align:center;font-size:15px}
+.lock{margin-inline-start:auto;font-size:12px;opacity:.7}
+.sb-foot{padding:14px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--txt-mut)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.page-title{font-size:18px;font-weight:700}.page-title small{display:block;font-size:11.5px;color:var(--txt-mut);font-weight:400;margin-top:1px}
+.spacer{flex:1}
+.search{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 12px;min-width:190px}
+.search input{background:none;border:none;outline:none;color:var(--txt);font-size:13px;width:100%}
+.search input::placeholder{color:var(--txt-mut)}
+.icon-btn{height:38px;min-width:38px;padding:0 10px;border-radius:10px;background:var(--panel);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;color:var(--txt-dim);font-size:14px;font-weight:700;transition:.18s}
+.icon-btn:hover{color:var(--txt);border-color:var(--brand)}
+.content{padding:20px 22px 50px;flex:1}
+.srcbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.srcbar .lbl{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--txt-mut);text-transform:uppercase}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:flex-end}
+.filter{display:flex;flex-direction:column;gap:3px}
+.filter label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--txt-mut);font-weight:700;padding-inline-start:2px}
+.filter select{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:9px;padding:7px 11px;font-size:12.5px;outline:none;cursor:pointer;min-width:128px}
+.filter select:focus{border-color:var(--brand)}
+.chip{background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:6px 13px;font-size:12px;cursor:pointer;color:var(--txt-dim);font-weight:600;transition:.15s}
+.chip.on{background:var(--grad);color:#fff;border-color:transparent}
+.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(auto-fit,minmax(178px,1fr))}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 17px;position:relative;overflow:hidden;box-shadow:var(--shadow);transition:.25s}
+.kpi:hover{transform:translateY(-3px);border-color:var(--brand)}
+.kpi::after{content:'';position:absolute;inset-inline-end:-20px;top:-20px;width:78px;height:78px;border-radius:50%;background:var(--grad);opacity:.13}
+.kpi .kl{font-size:11.5px;color:var(--txt-dim);font-weight:600;display:flex;align-items:center;gap:7px}.kpi .kl .e{font-size:15px}
+.kpi .kv{font-size:28px;font-weight:800;margin-top:8px;letter-spacing:-.5px}
+.kpi .kd{font-size:11.5px;margin-top:5px;font-weight:600}
+.kd.up{color:var(--good)}.kd.down{color:var(--bad)}.kd.mut{color:var(--txt-mut)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+.panel h3{font-size:14px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.panel .sub{font-size:11.5px;color:var(--txt-mut);margin-bottom:14px}
+.row{display:grid;gap:14px}.r-2{grid-template-columns:1fr 1fr}.r-3{grid-template-columns:1fr 1fr 1fr}.r-23{grid-template-columns:1.6fr 1fr}.r-32{grid-template-columns:1fr 1.6fr}
+@media(max-width:1050px){.r-2,.r-3,.r-23,.r-32{grid-template-columns:1fr}}
+.cv{position:relative;height:260px}.cv.sm{height:210px}.cv.lg{height:320px}
+.insight{display:flex;gap:12px;padding:12px 14px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);margin-bottom:10px;align-items:flex-start}
+.insight .bdg{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-size:16px}
+.insight b{font-size:13px}.insight p{font-size:12px;color:var(--txt-dim);margin-top:2px;line-height:1.5}
+.b-good{background:rgba(52,211,153,.16);color:var(--good)}.b-warn{background:rgba(251,191,36,.16);color:var(--warn)}.b-bad{background:rgba(248,113,113,.16);color:var(--bad)}.b-info{background:rgba(91,140,255,.16);color:var(--brand)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:start;color:var(--txt-mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;padding:9px 10px;border-bottom:1px solid var(--line);font-weight:700}
+td{padding:10px;border-bottom:1px solid var(--line);color:var(--txt-dim)}
+tr:last-child td{border-bottom:none}tr:hover td{color:var(--txt);background:var(--panel-2)}
+.rank{width:26px;height:26px;border-radius:8px;display:inline-grid;place-items:center;font-weight:800;font-size:12px}
+.rk1{background:var(--gold);color:#3a2c00}.rk2{background:#cbd5e1;color:#1e293b}.rk3{background:#d97742;color:#fff}.rkx{background:var(--panel-2);color:var(--txt-dim)}
+.bar{height:7px;border-radius:6px;background:var(--line);overflow:hidden;min-width:70px}.bar i{display:block;height:100%;border-radius:6px;background:var(--grad)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-inline-end:6px;vertical-align:middle}
+.prof-head{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.avatar{width:70px;height:70px;border-radius:18px;background:var(--grad);display:grid;place-items:center;font-size:26px;font-weight:800;color:#fff;flex-shrink:0}
+.tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.tag{background:var(--panel-2);border:1px solid var(--line);padding:4px 11px;border-radius:8px;font-size:11.5px;color:var(--txt-dim)}
+.risk{margin-inline-start:auto;text-align:center;padding:10px 18px;border-radius:14px;font-weight:800;font-size:13px}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center}
+.list-li{display:flex;align-items:center;gap:9px;padding:8px 0;font-size:13px;border-bottom:1px solid var(--line)}.list-li:last-child{border:none}
+.heat td{text-align:center;font-weight:700;color:#fff;border:2px solid var(--bg);border-radius:6px}.heat th{text-align:center}
+.fade{animation:fade .45s ease}@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--txt-dim);margin-top:10px}.legend span{display:flex;align-items:center;gap:6px}
+.gate{max-width:420px;margin:60px auto;text-align:center}
+.gate .lk{width:64px;height:64px;border-radius:18px;background:var(--grad);display:grid;place-items:center;font-size:28px;margin:0 auto 18px}
+.gate input{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:11px 14px;font-size:14px;outline:none;margin:14px 0}
+.gate button{width:100%;background:var(--grad);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer}
+.mobtog{display:none}
+.loader{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:99;transition:opacity .4s}
+.loader .ring{width:54px;height:54px;border:4px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:820px){.sidebar{position:fixed;inset-inline-start:-260px;z-index:60}.sidebar.open{inset-inline-start:0}.mobtog{display:grid}}
 </style>
 </head>
 <body>
-<div id="loading">جاري تحميل البيانات...</div>
-<div id="app">
-  <header>
-    <div>
-      <div class="logo">راصد</div>
-      <div id="schoolName"></div>
-    </div>
-    <a id="uploadLink" href="/dashboard/upload">رفع بيانات</a>
+<div class="loader" id="loader"><div style="text-align:center"><div class="ring"></div><div id="loaderTxt" style="margin-top:16px;color:var(--txt-dim);font-size:13px">Loading…</div></div></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brand-logo" style="font-size:13px">راصد</div><div class="brand-txt"><b id="brandName">راصد</b><span>Analytics Platform</span></div></div>
+  <nav class="nav" id="nav"></nav>
+  <div class="sb-foot" id="foot">Connecting…</div>
+  <div id="uploadLinkSb" style="display:none;padding:10px 16px;border-top:1px solid var(--line)">
+    <a href="/dashboard/upload" style="display:flex;align-items:center;gap:8px;background:var(--grad);color:#fff;padding:8px 14px;border-radius:10px;text-decoration:none;font-size:12.5px;font-weight:700">
+      <span>📤</span><span>رفع بيانات</span>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="icon-btn mobtog" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</div>
+    <div class="page-title" id="pgTitle">—<small id="pgSub"></small></div>
+    <div class="spacer"></div>
+    <div class="search"><span>🔎</span><input id="globalSearch" placeholder="Search student…" autocomplete="off" /></div>
+    <div class="icon-btn" id="langBtn" title="Language">AR</div>
+    <div class="icon-btn" id="themeBtn" title="Theme">🌙</div>
+    <div class="icon-btn" id="reloadBtn" title="Reload" onclick="loadData(true)">🔄</div>
   </header>
-  <main>
-    <div id="emptyMsg">لا توجد بيانات محفوظة — قم برفع بيانات الطلاب أولاً</div>
-    <div id="content" style="display:none">
-      <div class="filters">
-        <select id="filterGrade"><option value="">كل الصفوف</option></select>
-        <select id="filterClass"><option value="">كل الفصول</option></select>
-        <select id="filterSubject"><option value="">كل المواد</option></select>
-        <select id="filterQ"><option value="">كل الفصول الدراسية</option><option value="Q1">الفصل الأول (Q1)</option><option value="Q2">الفصل الثاني (Q2)</option><option value="Q3">الفصل الثالث (Q3)</option><option value="Q4">الفصل الرابع (Q4)</option></select>
-      </div>
-      <div class="stats">
-        <div class="stat"><div class="stat-label">الطلاب</div><div class="stat-value" id="sTotal" style="color:var(--blue)">0</div></div>
-        <div class="stat"><div class="stat-label">متوسط الدرجات</div><div class="stat-value" id="sAvg" style="color:var(--green)">0%</div></div>
-        <div class="stat"><div class="stat-label">الطلاب في خطر</div><div class="stat-value" id="sRisk" style="color:var(--red)">0</div></div>
-        <div class="stat"><div class="stat-label">نسبة النجاح</div><div class="stat-value" id="sPass" style="color:var(--yellow)">0%</div></div>
-      </div>
-      <div class="grid2">
-        <div class="card"><h3>أداء المواد</h3><div id="subjectBars"></div></div>
-        <div class="card"><h3>توزيع الدرجات</h3><canvas id="distChart" height="200"></canvas></div>
-      </div>
-      <div class="card" style="margin-bottom:24px">
-        <h3>قائمة الطلاب</h3>
-        <div style="overflow-x:auto">
-          <table><thead id="tableHead"></thead><tbody id="tableBody"></tbody></table>
-        </div>
-      </div>
-    </div>
-  </main>
+  <div class="srcbar"><span class="lbl" id="liveLbl">Live Data</span><span id="srcDot" class="dot" style="background:var(--warn)"></span><span id="srcStatus" style="font-size:12.5px;color:var(--txt-dim)">Connecting…</span></div>
+  <main class="content" id="content"></main>
 </div>
+
 <script>
-const SUPABASE_URL='https://majmtioaylcllzywtsli.supabase.co';
-const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ham10aW9heWxjbGx6eXd0c2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NzMyNTQsImV4cCI6MjA5ODA0OTI1NH0.2uBvzg7wourF1YNABELKKrGFoM8oBo675ioPjaKeLag';
-let allStudents=[],subjects=[],cfg={},distChart=null;
+/* ============================================================ i18n ============================================================ */
+var LANG='en';
+var T={
+ en:{brand:'Rased',live:'Live Data',search:'Search student…',reset:'Reset',all:'All',
+  gOverview:'Overview',gSubjects:'Subjects',gCohorts:'Cohorts',gPeople:'People & Growth',
+  exec:'Executive Dashboard',insights:'AI Insights',stage:'Stage Analysis',grade:'Grade Analysis',
+  classv:'Class Analysis',teacher:'Teacher Analysis',student:'Student Profile',ranks:'Top / Low Performers',
+  growth:'Growth Analysis',dist:'Performance Grade Distribution',
+  execSub:'School-wide performance overview',insightsSub:'Automated observations & alerts',
+  stageSub:'Cohort comparison by stage',gradeSub:'Performance by grade level',classSub:'Section-level deep dive',
+  teacherSub:'Instructor effectiveness',studentSub:'Individual academic record',ranksSub:'Leaderboards & watchlists',
+  growthSub:'Progression & trajectory',distSub:'Grade-letter breakdown',subjectSub:'Subject analytics dashboard',
+  fSchool:'School',fStage:'Stage',fGrade:'Grade',fClass:'Class',fSubject:'Subject',fTeacher:'Teacher',
+  fAssess:'Assessment Type',fSemester:'Semester',fYear:'Academic Year',fPerf:'Performance Grade',
+  kTotal:'Total Students',kAvg:'Average Score',kHigh:'Highest Score',kLow:'Lowest Score',kAbove:'Above Target',
+  kBelow:'Below Target',kRisk:'Students at Risk',kClasses:'Classes',kTeachers:'Teachers',kSchools:'Schools',kSD:'Std Deviation',
+  enrolled:'enrolled',aboveT:'▲ above target',belowT:'▼ below target',topPerf:'top performer',needsSup:'needs support',
+  ofRecords:'% of records',activeSec:'active sections',instructors:'instructors',inScope:'in scope',
+  subjCompare:'Subject Performance Comparison',avgPerSubject:'Average score per subject',
+  perfDist:'Performance Grade Distribution',spreadLetters:'Spread across grade letters',
+  topClasses:'Top Classes',lowClasses:'Lowest Performing Classes',highestSec:'Highest average sections',lowestSec:'Lowest average sections',
+  heatmap:'Stage × Subject Heatmap',intensity:'Average score intensity',autoInsights:'Auto-Generated Insights',
+  engineHi:'Engine highlights from current selection',low:'Low',mid:'Mid',high:'High',
+  sdSpread:'dispersion of scores',sdLow:'low spread — consistent',sdMid:'moderate spread',sdHigh:'high spread — uneven',
+  subjAvg:'Subject Average',students:'Students',inSubject:'in subject',highest:'Highest',atRisk:'At Risk',mastery:'Top Grade',
+  assessAnalysis:'Assessment Analysis',assessAcross:"Average across this subject's assessments",
+  gradeFilteredDist:'Performance grade spread',classCompare:'Class Comparison',avgByClass:'Average by class',
+  trend:'Trend Analysis',progression:'Progression across assessments',growthA:'Growth Analysis',byGrade:'by grade',
+  stageRank:'Stage Ranking',avgPerStage:'Average per stage',subjByStage:'Subject Performance by Stage',
+  highStage:'Highest Stage',lowStage:'Lowest Stage',stagesTracked:'Stages Tracked',inData:'in data',
+  topGrade:'Top Grade',lowGrade:'Lowest Grade',gradesTracked:'Grades Tracked',spread:'Spread',topVsBottom:'top vs bottom',
+  gradeRankAvg:'Grade Ranking & Average',byGradeLevel:'by grade level',subjByGrade:'Subject Comparison by Grade',
+  highLowGrades:'Highest & Lowest Grades',ranked:'Ranked',
+  selClass:'selected section',classAvg:'Class Average',rank:'Rank',ofClasses:'classes',highStudent:'Highest Student',lowStudent:'Lowest Student',
+  allClassesRanked:'All Classes Ranked',drillHint:'Use the Class filter to drill in',perfWithin:'Within class',
+  classRoster:'Class Roster',rosterSub:'Student names & grades — respects active filters (e.g. set Performance Grade = F to list who failed)',cStudent:'Student',cScore:'Score',
+  teacherAvg:'Teacher Average',taught:'taught',vsSchool:'vs School Avg',school:'school',effIndex:'Effectiveness Index',composite:'composite score',
+  classPerf:'Class Performance',subjPerf:'Subject Performance',bySubjectTaught:'By subject taught',compareTeachers:'Comparison With Other Teachers',schoolRanking:'School-wide ranking',
+  selStudent:'Select Student',overall:'Overall',subjScores:'Subject Scores',perPerSubject:'Performance per subject',
+  growthTimeline:'Growth Timeline',assessProgress:'Assessment progress per subject',assessRadar:'Assessment Radar',profileAcross:'Profile across assessments',
+  strengths:'Strength Areas',topSubjects:'Top subjects',improvements:'Areas for Improvement',needSupport:'Subjects needing support',
+  riskExcellent:'🟢 Excellent',riskMonitor:'🟡 Monitor',riskInterv:'🔴 Intervention Needed',riskInd:'Risk Indicator',
+  topStudents:'Top Students',bottomStudents:'Bottom Students',topTeachers:'Top Teachers',bottomTeachers:'Bottom Teachers',
+  topCls:'Top Classes',bottomClasses:'Bottom Classes',topGrades:'Top Grades',bottomGrades:'Bottom Grades',top10:'Top 10 by average',bottom10:'Bottom 10 by average',
+  subjTraj:'Subject Trajectories',avgAcrossSeq:"Average across each subject's assessment sequence",growthBySG:'Growth by Subject & Grade',firstLast:'First → last assessment delta',
+  perfBars:'Performance Grade (Bars)',countPer:'Count per grade letter',propSpread:'Proportional Spread',shareEach:'Share of each grade',
+  noData:'No data to display',noStage:'No Stage column found.',noGrade:'No Grade data.',noClass:'No Class data.',noTeacher:'No Teacher data.',
+  teacherLocked:'Teachers — Restricted',teacherGate:'This page is for administration only. Enter the password to continue.',unlock:'Unlock',
+  wrongPass:'Incorrect password or unauthorized account.',verifying:'Verifying…',
+  growthLabel:'Growth',item:'Item'},
+ ar:{brand:'راصد',live:'بيانات حية',search:'ابحث عن طالب…',reset:'إعادة ضبط',all:'الكل',
+  gOverview:'نظرة عامة',gSubjects:'المواد',gCohorts:'المجموعات',gPeople:'الطلاب والنمو',
+  exec:'اللوحة التنفيذية',insights:'استنتاجات ذكية',stage:'تحليل المراحل',grade:'تحليل الصفوف',
+  classv:'تحليل الفصول',teacher:'تحليل المعلمين',student:'ملف الطالب',ranks:'الأعلى / الأدنى أداءً',
+  growth:'تحليل النمو',dist:'توزيع التقديرات',
+  execSub:'نظرة عامة على أداء المدرسة',insightsSub:'ملاحظات وتنبيهات تلقائية',
+  stageSub:'مقارنة المراحل الدراسية',gradeSub:'الأداء حسب الصف',classSub:'تحليل تفصيلي للفصول',
+  teacherSub:'فاعلية المعلمين',studentSub:'السجل الأكاديمي للطالب',ranksSub:'قوائم الترتيب والمتابعة',
+  growthSub:'التقدّم والمسار',distSub:'تفصيل التقديرات الحرفية',subjectSub:'لوحة تحليل المادة',
+  fSchool:'المدرسة',fStage:'المرحلة',fGrade:'الصف',fClass:'الفصل',fSubject:'المادة',fTeacher:'المعلم',
+  fAssess:'نوع الاختبار',fSemester:'الفصل الدراسي',fYear:'العام الدراسي',fPerf:'التقدير',
+  kTotal:'إجمالي الطلاب',kAvg:'متوسط الدرجات',kHigh:'أعلى درجة',kLow:'أدنى درجة',kAbove:'فوق الهدف',
+  kBelow:'تحت الهدف',kRisk:'طلاب في خطر',kClasses:'الفصول',kTeachers:'المعلمون',kSchools:'المدارس',kSD:'الانحراف المعياري',
+  enrolled:'مسجّل',aboveT:'▲ فوق الهدف',belowT:'▼ تحت الهدف',topPerf:'الأعلى أداءً',needsSup:'يحتاج دعمًا',
+  ofRecords:'٪ من السجلات',activeSec:'شعبة نشطة',instructors:'معلمًا',inScope:'في النطاق',
+  subjCompare:'مقارنة أداء المواد',avgPerSubject:'متوسط الدرجة لكل مادة',
+  perfDist:'توزيع التقديرات',spreadLetters:'توزّع التقديرات الحرفية',
+  topClasses:'أعلى الفصول',lowClasses:'أدنى الفصول أداءً',highestSec:'أعلى الشُعب متوسطًا',lowestSec:'أدنى الشُعب متوسطًا',
+  heatmap:'خريطة حرارية: المرحلة × المادة',intensity:'كثافة متوسط الدرجات',autoInsights:'استنتاجات تلقائية',
+  engineHi:'أبرز ما يرصده المحرك من التحديد الحالي',low:'منخفض',mid:'متوسط',high:'مرتفع',
+  sdSpread:'تشتّت الدرجات',sdLow:'تشتّت منخفض — تجانس',sdMid:'تشتّت متوسط',sdHigh:'تشتّت مرتفع — تفاوت',
+  subjAvg:'متوسط المادة',students:'الطلاب',inSubject:'في المادة',highest:'الأعلى',atRisk:'في خطر',mastery:'أعلى تقدير',
+  assessAnalysis:'تحليل الاختبارات',assessAcross:'المتوسط عبر اختبارات هذه المادة',
+  gradeFilteredDist:'توزّع التقديرات',classCompare:'مقارنة الفصول',avgByClass:'المتوسط حسب الفصل',
+  trend:'تحليل الاتجاه',progression:'التقدّم عبر الاختبارات',growthA:'تحليل النمو',byGrade:'حسب الصف',
+  stageRank:'ترتيب المراحل',avgPerStage:'المتوسط لكل مرحلة',subjByStage:'أداء المواد حسب المرحلة',
+  highStage:'أعلى مرحلة',lowStage:'أدنى مرحلة',stagesTracked:'المراحل المرصودة',inData:'في البيانات',
+  topGrade:'أعلى صف',lowGrade:'أدنى صف',gradesTracked:'الصفوف المرصودة',spread:'الفارق',topVsBottom:'الأعلى مقابل الأدنى',
+  gradeRankAvg:'ترتيب الصفوف ومتوسطها',byGradeLevel:'حسب الصف الدراسي',subjByGrade:'مقارنة المواد حسب الصف',
+  highLowGrades:'أعلى وأدنى الصفوف',ranked:'مرتّبة',
+  selClass:'الشعبة المختارة',classAvg:'متوسط الفصل',rank:'الترتيب',ofClasses:'فصلًا',highStudent:'الأعلى',lowStudent:'الأدنى',
+  allClassesRanked:'ترتيب جميع الفصول',drillHint:'استخدم فلتر الفصل للتفصيل',perfWithin:'داخل الفصل',
+  classRoster:'كشف الفصل',rosterSub:'أسماء الطلاب وتقديراتهم — يتأثر بالفلاتر (مثلاً اختر Performance Grade = F لعرض من رسب)',cStudent:'الطالب',cScore:'الدرجة',
+  teacherAvg:'متوسط المعلم',taught:'يُدرّسهم',vsSchool:'مقابل متوسط المدرسة',school:'المدرسة',effIndex:'مؤشر الفاعلية',composite:'درجة مركّبة',
+  classPerf:'أداء الفصول',subjPerf:'أداء المواد',bySubjectTaught:'حسب المادة المُدرّسة',compareTeachers:'مقارنة بالمعلمين الآخرين',schoolRanking:'الترتيب على مستوى المدرسة',
+  selStudent:'اختر الطالب',overall:'العام',subjScores:'درجات المواد',perPerSubject:'الأداء لكل مادة',
+  growthTimeline:'مسار النمو',assessProgress:'تقدّم الاختبارات لكل مادة',assessRadar:'رادار الاختبارات',profileAcross:'الملف عبر الاختبارات',
+  strengths:'نقاط القوة',topSubjects:'أعلى المواد',improvements:'جوانب التطوير',needSupport:'مواد تحتاج دعمًا',
+  riskExcellent:'🟢 ممتاز',riskMonitor:'🟡 متابعة',riskInterv:'🔴 يحتاج تدخّلًا',riskInd:'مؤشر الخطر',
+  topStudents:'أعلى الطلاب',bottomStudents:'أدنى الطلاب',topTeachers:'أعلى المعلمين',bottomTeachers:'أدنى المعلمين',
+  topCls:'أعلى الفصول',bottomClasses:'أدنى الفصول',topGrades:'أعلى الصفوف',bottomGrades:'أدنى الصفوف',top10:'أعلى ١٠ بالمتوسط',bottom10:'أدنى ١٠ بالمتوسط',
+  subjTraj:'مسارات المواد',avgAcrossSeq:'المتوسط عبر تسلسل اختبارات كل مادة',growthBySG:'النمو حسب المادة والصف',firstLast:'الفرق بين أول وآخر اختبار',
+  perfBars:'التقديرات (أعمدة)',countPer:'العدد لكل تقدير',propSpread:'التوزيع النسبي',shareEach:'نسبة كل تقدير',
+  noData:'لا توجد بيانات للعرض',noStage:'لا يوجد عمود مرحلة.',noGrade:'لا توجد بيانات صفوف.',noClass:'لا توجد بيانات فصول.',noTeacher:'لا توجد بيانات معلمين.',
+  teacherLocked:'المعلمون — صفحة محمية',teacherGate:'هذه الصفحة للإدارة فقط. أدخل كلمة المرور للمتابعة.',unlock:'فتح',
+  wrongPass:'كلمة مرور خاطئة أو حساب غير مصرّح.',verifying:'جارٍ التحقق…',
+  growthLabel:'النمو',item:'عنصر'}
+};
+var VAL={ar:{'Arabic Language':'اللغة العربية','Islamic Studies':'الدراسات الإسلامية','Social Studies':'الدراسات الاجتماعية',
+  'Primary':'ابتدائي','Middle':'متوسط','Middle School':'متوسط','Secondary':'متوسط','Upper Secondary':'ثانوي','High School':'ثانوي','Elementary':'ابتدائي',
+  'Boys':'بنين','Girls':'بنات','Semester 1':'الفصل الأول','Semester 2':'الفصل الثاني'}};
+function t(k){return (T[LANG]&&T[LANG][k])||T.en[k]||k;}
+function tv(v){ if(LANG==='ar'&&VAL.ar[v]) return VAL.ar[v]; return v; }
 
-function showEmpty(msg){
-  document.getElementById('emptyMsg').style.display='block';
-  document.getElementById('emptyMsg').textContent=msg||'لا توجد بيانات';
-}
 
-async function init(){
-  const hash=new URLSearchParams(location.hash.slice(1));
-  const at=hash.get('access_token'),rt=hash.get('refresh_token');
-  const client=supabase.createClient(SUPABASE_URL,ANON_KEY);
-  if(at){await client.auth.setSession({access_token:at,refresh_token:rt});history.replaceState(null,'',location.pathname);}
-  const {data:{user}}=await client.auth.getUser();
-  if(!user){location.href='/';return;}
-  const {data:profile}=await client.from('user_profiles').select('school_id,role').eq('id',user.id).single();
-  const schoolId=profile?.school_id;
-  if(!schoolId){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('app').style.display='flex';
-    showEmpty('لم يتم تعيين مدرسة لهذا الحساب. تواصل مع المدير.');
-    return;
-  }
-  if(profile?.role==='manager'||profile?.role==='admin')document.getElementById('uploadLink').style.display='inline-block';
-  const {data:school}=await client.from('schools').select('name').eq('id',schoolId).single();
-  if(school)document.getElementById('schoolName').textContent=school.name;
-  const {data:rec}=await client.from('school_data').select('rows,config,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(1).single();
-  document.getElementById('loading').style.display='none';
-  document.getElementById('app').style.display='flex';
-  if(!rec||!rec.rows||!rec.rows.length){showEmpty('لا توجد بيانات محفوظة — قم برفع بيانات الطلاب أولاً');return;}
-  allStudents=rec.rows;cfg=rec.config||{};subjects=cfg.subjects||[];
-  populateFilters();
-  document.getElementById('content').style.display='block';
-  render();
-}
+/* ============================================================ Supabase Auth ============================================================ */
+var SUPABASE_URL='https://majmtioaylcllzywtsli.supabase.co';
+var ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ham10aW9heWxjbGx6eXd0c2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NzMyNTQsImV4cCI6MjA5ODA0OTI1NH0.2uBvzg7wourF1YNABELKKrGFoM8oBo675ioPjaKeLag';
+var SUPABASE_CLIENT=null;
+var USER_ROLE='';
 
-function populateFilters(){
-  const grades=[...new Set(allStudents.map(s=>s.grade).filter(Boolean))];
-  const classes=[...new Set(allStudents.map(s=>s.class).filter(Boolean))];
-  const fg=document.getElementById('filterGrade');
-  const fc=document.getElementById('filterClass');
-  const fs=document.getElementById('filterSubject');
-  grades.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;fg.appendChild(o);});
-  classes.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;fc.appendChild(o);});
-  subjects.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;fs.appendChild(o);});
-  [fg,fc,fs,document.getElementById('filterQ')].forEach(el=>el.addEventListener('change',render));
-}
+/* ============================================================ engine ============================================================ */
+var SUBJECT_ALIAS={'Arabic':'Arabic Language','Islam':'Islamic Studies','Islamic':'Islamic Studies','Social':'Social Studies'};
+var IDENT_ALIASES={school:['school'],name:['student name','name'],grade:['grade','school grade'],class:['class','section'],
+  stage:['stage','educational stage'],semester:['semester','term'],year:['academic year','year']};
+var RECORDS=[], DIMS={}, ALL_ASSESS=[], ASSESS_BY_SUBJECT={}, SUBJECTS=[], GRADE_ORDER=[], TARGETS={}, DEFAULT_TARGET=80, RISK=60;
+var F={school:'',stage:'',grade:'',class:'',subject:'',teacher:'',semester:'',year:'',perf:'',assess:''};
+var CURRENT='exec', SELSTU=null, TEACHER_OK=false;
 
-function getFiltered(){
-  const g=document.getElementById('filterGrade').value;
-  const c=document.getElementById('filterClass').value;
-  return allStudents.filter(s=>(g?s.grade===g:true)&&(c?s.class===c:true));
-}
+function norm(s){return String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,' ');}
+function uniq(a){return [...new Set(a)];}
+function avg(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:0;}
+function r1(n){return Math.round(n*10)/10;}
+function numv(v){var n=parseFloat(v);return isNaN(n)?null:n;}
+function gradeLetter(p){return p>=95?'A+':p>=90?'A':p>=85?'B+':p>=80?'B':p>=75?'C+':p>=70?'C':p>=60?'D':'F';}
 
-function avg(nums){const v=nums.filter(n=>!isNaN(n)&&n!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:NaN;}
+function ingest(payload){
+  RISK=(payload.config&&payload.config.risk)||60;
+  DEFAULT_TARGET=(payload.config&&payload.config.defaultTarget)||80;
+  var headers=payload.headers, rows=payload.rows;
+  var H=headers.map(norm);
+  function findCol(al){return H.findIndex(function(h){return al.indexOf(h)>=0;});}
+  var idc={}; Object.keys(IDENT_ALIASES).forEach(function(k){idc[k]=findCol(IDENT_ALIASES[k]);});
+  var identityIdx=new Set(Object.values(idc).filter(function(i){return i>=0;}));
 
-function getScore(st,subj,q){
-  if(!st.grades)return NaN;
-  if(subj){if(q)return st.grades[subj]?.[q]??NaN;return avg(Object.values(st.grades[subj]||{}));}
-  const all=[];
-  for(const s of subjects){if(q){all.push(st.grades[s]?.[q]??NaN);}else{all.push(avg(Object.values(st.grades[s]||{})));}}
-  return avg(all);
-}
-
-function render(){
-  const filtered=getFiltered();
-  const subj=document.getElementById('filterSubject').value;
-  const q=document.getElementById('filterQ').value;
-  const risk=cfg.risk||60,target=cfg.defaultTarget||80;
-  const scores=filtered.map(s=>getScore(s,subj,q)).filter(n=>!isNaN(n));
-  const overallAvg=avg(scores);
-  const atRisk=filtered.filter(s=>{const sc=getScore(s,subj,q);return!isNaN(sc)&&sc<risk;}).length;
-  const passing=scores.filter(n=>n>=target).length;
-  document.getElementById('sTotal').textContent=filtered.length;
-  document.getElementById('sAvg').textContent=isNaN(overallAvg)?'—':overallAvg.toFixed(1)+'%';
-  document.getElementById('sRisk').textContent=atRisk;
-  document.getElementById('sPass').textContent=scores.length?Math.round(passing/scores.length*100)+'%':'—';
-  const bars=document.getElementById('subjectBars');
-  bars.innerHTML='';
-  const subjList=subj?[subj]:subjects;
-  subjList.forEach(s=>{
-    const vals=filtered.map(st=>getScore(st,s,q)).filter(n=>!isNaN(n));
-    const a=avg(vals);const pct=isNaN(a)?0:Math.round(a);
-    const color=pct>=target?'var(--green)':pct>=risk?'var(--yellow)':'var(--red)';
-    bars.innerHTML+=`<div class="bar-row"><span>${s}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div><span class="pct">${isNaN(a)?'—':pct+'%'}</span></div>`;
+  // group prefixed columns: prefix -> {assess:[], scoreIdx, gradeIdx}
+  var groups={};
+  headers.forEach(function(h,i){
+    if(identityIdx.has(i)) return;
+    var m=h.match(/^([A-Za-z]+)\s*-\s*(.+)$/);
+    if(!m) return;
+    var pref=m[1], suf=m[2].trim().toLowerCase();
+    groups[pref]=groups[pref]||{assess:[],scoreIdx:-1,gradeIdx:-1};
+    if(suf==='score%'||suf==='score'||suf==='score %') groups[pref].scoreIdx=i;
+    else if(suf==='grade') groups[pref].gradeIdx=i;
+    else groups[pref].assess.push(i);
   });
-  const buckets=[0,0,0,0,0];
-  scores.forEach(sc=>{if(sc<50)buckets[0]++;else if(sc<60)buckets[1]++;else if(sc<70)buckets[2]++;else if(sc<80)buckets[3]++;else buckets[4]++;});
-  if(distChart)distChart.destroy();
-  const ctx=document.getElementById('distChart').getContext('2d');
-  distChart=new Chart(ctx,{type:'bar',data:{labels:['< 50','50-60','60-70','70-80','80+'],datasets:[{data:buckets,backgroundColor:['#f87171','#fb923c','#fbbf24','#34d399','#5b8cff'],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8b8fa8'},grid:{color:'#2a2d3e'}},y:{ticks:{color:'#8b8fa8'},grid:{color:'#2a2d3e'}}}}});
-  const thead=document.getElementById('tableHead');
-  const tbody=document.getElementById('tableBody');
-  const dispSubjs=subj?[subj]:subjects.slice(0,5);
-  thead.innerHTML='<tr><th>الاسم</th><th>الصف</th><th>الفصل</th>'+dispSubjs.map(s=>`<th>${s}</th>`).join('')+'<th>المتوسط</th><th>الحالة</th></tr>';
-  tbody.innerHTML=filtered.slice(0,100).map(s=>{
-    const ra=getScore(s,subj,q);
-    const color=isNaN(ra)?'':ra>=target?'green':ra>=risk?'yellow':'red';
-    const label=isNaN(ra)?'—':ra>=target?'ممتاز':ra>=risk?'مقبول':'في خطر';
-    return '<tr><td>'+s.name+'</td><td>'+s.grade+'</td><td>'+(s.class||'—')+'</td>'+
-      dispSubjs.map(su=>{const v=getScore(s,su,q);return '<td>'+(isNaN(v)?'—':v.toFixed(1))+'</td>';}).join('')+
-      '<td>'+(isNaN(ra)?'—':ra.toFixed(1)+'%')+'</td>'+
-      '<td><span class="badge '+color+'">'+label+'</span></td></tr>';
-  }).join('');
+  // teachers: match on School + Academic Year + Class + Subject (school/year optional; most specific wins)
+  var TEACHERS_RAW=(payload.teachers||[]).map(function(o){return {
+    school:String(o.School||o['school']||'').trim(),
+    year:String(o['Academic Year']||o.Year||o['year']||'').trim(),
+    cls:String(o.Class||o['class']||'').trim(),
+    subj:String(o.Subject||o['subject']||'').trim(),
+    tch:String(o.Teacher||o['teacher']||'').trim()
+  };}).filter(function(x){return x.cls&&x.subj&&x.tch;});
+  function teacherFor(school,cls,subj,yr){
+    var best='',bestScore=-1;
+    TEACHERS_RAW.forEach(function(o){
+      if(o.cls!==cls||o.subj!==subj) return;
+      if(o.school&&school&&o.school!==school) return; // school must match when both specified
+      if(o.year&&yr&&o.year!==yr) return;             // year must match when both specified
+      var sc=(o.school&&school?2:0)+(o.year&&yr?1:0); // prefer the most specific matching row
+      if(sc>bestScore){bestScore=sc;best=o.tch;}
+    });
+    return best;
+  }
+  // targets map: subject -> { any:number, byYear:{year:number} }  (supports Subject|Target or Subject|Academic Year|Target)
+  TARGETS={};
+  (payload.targets||[]).forEach(function(o){
+    var subj=String(o.Subject||o['subject']||'').trim();
+    var yr=String(o['Academic Year']||o.Year||o['year']||'').trim();
+    var tgt=numv(o.Target!=null?o.Target:o['target']);
+    if(!subj||tgt==null) return;
+    TARGETS[subj]=TARGETS[subj]||{any:null,byYear:{}};
+    if(yr) TARGETS[subj].byYear[yr]=tgt; else TARGETS[subj].any=tgt;
+  });
+  function targetFor(subj,yr){ var o=TARGETS[subj]; if(!o) return DEFAULT_TARGET; if(yr&&o.byYear[yr]!=null) return o.byYear[yr]; if(o.any!=null) return o.any; var ks=Object.keys(o.byYear); return ks.length?o.byYear[ks[0]]:DEFAULT_TARGET; }
+
+  var subjPrefixes=Object.keys(groups).filter(function(p){return p.toLowerCase()!=='overall';});
+  ALL_ASSESS=[];
+  subjPrefixes.forEach(function(p){groups[p].assess.forEach(function(i){ALL_ASSESS.push(headers[i]);});});
+
+  RECORDS=[];
+  rows.forEach(function(r){
+    var name=idc.name>=0?String(r[idc.name]||'').trim():'';
+    var grade=idc.grade>=0?String(r[idc.grade]||'').trim():'';
+    var cls=idc.class>=0?String(r[idc.class]||'').trim():'';
+    var sem=idc.semester>=0?String(r[idc.semester]||'').trim():'';
+    var yr=idc.year>=0?String(r[idc.year]||'').trim():'';
+    var sch=idc.school>=0?String(r[idc.school]||'').trim():'';
+    if(!name && !cls) return;
+    var sid=sch+'|'+name+'|'+grade+'|'+cls;  // person key (counted once across semesters/years)
+    subjPrefixes.forEach(function(p){
+      var g=groups[p];
+      var hasData=g.assess.some(function(i){return numv(r[i])!=null;}) || (g.scoreIdx>=0 && numv(r[g.scoreIdx])!=null);
+      if(!hasData) return;
+      var subjName=SUBJECT_ALIAS[p]||p;
+      var ass={}, sum=0, cnt=0;
+      g.assess.forEach(function(i){var v=numv(r[i]); if(v!=null){ass[headers[i]]=v;sum+=v;cnt++;}});
+      var score=g.scoreIdx>=0?numv(r[g.scoreIdx]):null;
+      if(score==null) score=cnt?Math.round(sum/cnt):0;
+      var perf=g.gradeIdx>=0?String(r[g.gradeIdx]||'').trim():'';
+      if(!perf) perf=gradeLetter(score);
+      RECORDS.push({
+        id:sid, name:name||'Unknown',
+        school:idc.school>=0?String(r[idc.school]||'').trim():'',
+        grade:grade, class:cls, stage:idc.stage>=0?String(r[idc.stage]||'').trim():'',
+        semester:sem, year:yr, subject:subjName,
+        teacher:teacherFor(sch,cls,subjName,yr),
+        score:score, perf:perf, assess:ass,
+        target:targetFor(subjName,yr)
+      });
+    });
+  });
+
+  DIMS={};
+  ['school','stage','grade','class','subject','teacher','semester','year','perf'].forEach(function(k){
+    var vals=uniq(RECORDS.map(function(r){return r[k];}).filter(function(v){return v!=='';}));
+    if(vals.length) DIMS[k]=vals;
+  });
+  SUBJECTS=DIMS.subject?DIMS.subject.slice():[];
+  ASSESS_BY_SUBJECT={};
+  SUBJECTS.forEach(function(s){
+    var present=new Set();
+    RECORDS.filter(function(r){return r.subject===s;}).forEach(function(r){Object.keys(r.assess).forEach(function(a){present.add(a);});});
+    ASSESS_BY_SUBJECT[s]=ALL_ASSESS.filter(function(a){return present.has(a);});
+  });
+  GRADE_ORDER=(DIMS.grade||[]).slice().sort(function(a,b){
+    var na=parseInt(String(a).replace(/\D/g,''),10), nb=parseInt(String(b).replace(/\D/g,''),10);
+    if(!isNaN(na)&&!isNaN(nb)) return na-nb; return String(a).localeCompare(String(b));});
+  if(DIMS.perf) DIMS.perf=DIMS.perf.slice().sort(function(a,b){
+    return avg(RECORDS.filter(function(r){return r.perf===b;}).map(function(r){return r.score;}))-avg(RECORDS.filter(function(r){return r.perf===a;}).map(function(r){return r.score;}));});
 }
 
-init().catch(err=>{
-  document.getElementById('loading').style.display='none';
-  document.getElementById('app').style.display='flex';
-  showEmpty('خطأ في التحميل: '+err.message);
-});
+function ingestSupabase(p){
+  var rows=p.rows||[], cfg=p.config||{};
+  RISK=cfg.risk||60; DEFAULT_TARGET=cfg.defaultTarget||80;
+  var subjectList=cfg.subjects||[];
+  var teachersRaw=cfg.teachers||[];
+  var targetsRaw=cfg.targets||[];
+  TARGETS={};
+  targetsRaw.forEach(function(o){
+    var subj=String(o.Subject||o.subject||'').trim();
+    var tgt=parseFloat(o.Target!=null?o.Target:o.target);
+    if(subj&&!isNaN(tgt))TARGETS[subj]={any:tgt,byYear:{}};
+  });
+  function teacherFor(cls,subj){
+    var found=teachersRaw.find(function(o){return String(o.Class||o.class||'').trim()===cls&&String(o.Subject||o.subject||'').trim()===subj;});
+    return found?String(found.Teacher||found.teacher||'').trim():'';
+  }
+  RECORDS=[];
+  rows.forEach(function(row){
+    var name=String(row.name||'').trim();
+    var grade=String(row.grade||'').trim();
+    var cls=String(row.class||'').trim();
+    var stage=String(row.stage||'').trim();
+    var semester=String(row.semester||row.Semester||'').trim();
+    var yr=String(row.year||row.Year||'').trim();
+    if(!name&&!cls) return;
+    var sid=name+'|'+grade+'|'+cls;
+    var grades=row.grades||{};
+    subjectList.forEach(function(subj){
+      var sg=grades[subj]||{};
+      var qkeys=Object.keys(sg).filter(function(k){return sg[k]!=null&&!isNaN(parseFloat(sg[k]));});
+      if(!qkeys.length) return;
+      var vals=qkeys.map(function(k){return parseFloat(sg[k]);});
+      var score=Math.round(vals.reduce(function(a,b){return a+b;},0)/vals.length);
+      var assess={};
+      qkeys.forEach(function(q){assess[q]=parseFloat(sg[q]);});
+      RECORDS.push({
+        id:sid,name:name,school:'',grade:grade,class:cls,stage:stage,
+        semester:semester,year:yr,subject:subj,
+        teacher:teacherFor(cls,subj),
+        score:score,perf:gradeLetter(score),assess:assess,
+        target:targetFor(subj,yr)
+      });
+    });
+  });
+  DIMS={};
+  ['school','stage','grade','class','subject','teacher','semester','year','perf'].forEach(function(k){
+    var vals=uniq(RECORDS.map(function(r){return r[k];}).filter(function(v){return v!=='';}) );
+    if(vals.length)DIMS[k]=vals;
+  });
+  SUBJECTS=subjectList.filter(function(s){return RECORDS.some(function(r){return r.subject===s;});});
+  if(!SUBJECTS.length)SUBJECTS=DIMS.subject?DIMS.subject.slice():[];
+  ALL_ASSESS=['Q1','Q2','Q3','Q4'];
+  ASSESS_BY_SUBJECT={};
+  SUBJECTS.forEach(function(s){
+    var present=new Set();
+    RECORDS.filter(function(r){return r.subject===s;}).forEach(function(r){Object.keys(r.assess).forEach(function(a){present.add(a);});});
+    ASSESS_BY_SUBJECT[s]=['Q1','Q2','Q3','Q4'].filter(function(q){return present.has(q);});
+  });
+  GRADE_ORDER=(DIMS.grade||[]).slice().sort(function(a,b){
+    var na=parseInt(String(a).replace(/\D/g,''),10),nb=parseInt(String(b).replace(/\D/g,''),10);
+    if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));});
+  if(DIMS.perf)DIMS.perf=DIMS.perf.slice().sort(function(a,b){
+    return avg(RECORDS.filter(function(r){return r.perf===b;}).map(function(r){return r.score;}))-avg(RECORDS.filter(function(r){return r.perf===a;}).map(function(r){return r.score;}));});
+}
+
+function gs(r){ if(F.assess && r.assess[F.assess]!=null) return r.assess[F.assess]; return r.score; }
+function applyFilters(recs){return recs.filter(function(r){
+  if(F.school&&r.school!==F.school)return false; if(F.stage&&r.stage!==F.stage)return false;
+  if(F.grade&&r.grade!==F.grade)return false; if(F.class&&r.class!==F.class)return false;
+  if(F.subject&&r.subject!==F.subject)return false; if(F.teacher&&r.teacher!==F.teacher)return false;
+  if(F.semester&&r.semester!==F.semester)return false; if(F.year&&r.year!==F.year)return false;
+  if(F.perf&&r.perf!==F.perf)return false; if(F.assess&&r.assess[F.assess]==null)return false; return true;});}
+function applyFiltersExcept(except){var saved=F[except];F[except]='';var res=applyFilters(RECORDS);F[except]=saved;return res;}
+function optionsFor(k){
+  var base=applyFiltersExcept(k);
+  if(k==='assess'){var present=new Set();base.forEach(function(r){Object.keys(r.assess).forEach(function(a){present.add(a);});});return ALL_ASSESS.filter(function(a){return present.has(a);});}
+  var vals=uniq(base.map(function(r){return r[k];}).filter(function(v){return v!=='';}));
+  if(k==='grade')return GRADE_ORDER.filter(function(g){return vals.indexOf(g)>=0;});
+  if(k==='perf'&&DIMS.perf)return DIMS.perf.filter(function(p){return vals.indexOf(p)>=0;});
+  return vals.sort();
+}
+function subjAssess(s){return ASSESS_BY_SUBJECT[s]||[];}
+function stdev(arr){if(arr.length<2)return 0;var m=avg(arr);return Math.sqrt(avg(arr.map(function(x){return (x-m)*(x-m);})));}
+function targetFor(subj,yr){var o=TARGETS[subj];if(!o)return DEFAULT_TARGET;if(yr&&o.byYear&&o.byYear[yr]!=null)return o.byYear[yr];if(o.any!=null)return o.any;var ks=o.byYear?Object.keys(o.byYear):[];return ks.length?o.byYear[ks[0]]:DEFAULT_TARGET;}
+
+/* ============================================================ chart helpers ============================================================ */
+var CHARTS=[];
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function destroyCharts(){CHARTS.forEach(function(c){c.destroy();});CHARTS=[];}
+function mk(ctx,cfg){var c=new Chart(ctx,cfg);CHARTS.push(c);return c;}
+function gridClr(){return css('--line');}
+function baseOpts(extra){var o={responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:css('--txt-dim'),font:{size:11},boxWidth:12}}},
+  scales:{x:{ticks:{color:css('--txt-mut'),font:{size:10}},grid:{color:gridClr()}},y:{ticks:{color:css('--txt-mut'),font:{size:10}},grid:{color:gridClr()}}}};
+  return Object.assign(o,extra||{});}
+function grad(ctx,c1,c2){var g=ctx.createLinearGradient(0,0,0,260);g.addColorStop(0,c1);g.addColorStop(1,c2);return g;}
+var PAL=['#22d3ee','#34d399','#5b8cff','#7c5cff','#fbbf24','#fb923c','#f87171','#ef4444','#a78bfa','#2dd4bf'];
+var C=function(){return document.getElementById('content');};
+
+function kpiCard(label,emoji,val,delta,cls){return '<div class="kpi fade"><div class="kl"><span class="e">'+emoji+'</span>'+label+'</div><div class="kv">'+val+'</div><div class="kd '+(cls||'mut')+'">'+(delta||'')+'</div></div>';}
+function filterBar(keys){
+  var lblmap={school:'fSchool',stage:'fStage',grade:'fGrade',class:'fClass',subject:'fSubject',teacher:'fTeacher',assess:'fAssess',semester:'fSemester',year:'fYear',perf:'fPerf'};
+  var h='<div class="filters">';
+  keys.forEach(function(k){
+    var vals=optionsFor(k);
+    if(F[k]&&vals.indexOf(F[k])<0)vals=[F[k]].concat(vals);
+    if(!vals||!vals.length)return;
+    h+='<div class="filter"><label>'+t(lblmap[k])+'</label><select data-f="'+k+'"><option value="">'+t('all')+'</option>'+
+      vals.map(function(v){return '<option value="'+String(v).replace(/"/g,'&quot;')+'" '+(F[k]===v?'selected':'')+'>'+(k==='subject'||k==='stage'||k==='semester'?tv(v):v)+'</option>';}).join('')+'</select></div>';
+  });
+  h+='<div class="filter"><label>&nbsp;</label><div class="chip" onclick="resetFilters()">↺ '+t('reset')+'</div></div></div>';
+  return h;
+}
+function resetFilters(){Object.keys(F).forEach(function(k){F[k]='';});render(CURRENT);}
+function bindFilters(){document.querySelectorAll('select[data-f]').forEach(function(s){s.onchange=function(){F[s.dataset.f]=s.value;if(s.dataset.f==='stage')F.grade='';render(CURRENT);};});}
+
+function leaderTable(items,el,limit,top){
+  var sorted=items.slice().sort(function(x,y){return top===false?x.a-y.a:y.a-x.a;}).slice(0,limit||10);
+  var mx=Math.max.apply(null,items.map(function(x){return x.a;}))||1;
+  document.getElementById(el).innerHTML='<table><tbody>'+sorted.map(function(x,i){return '<tr><td style="width:30px"><span class="rank '+(top!==false&&i<3?'rk'+(i+1):'rkx')+'">'+(i+1)+'</span></td><td style="color:var(--txt);font-weight:600">'+x.n+'</td><td style="width:55px;font-weight:700">'+r1(x.a)+'%</td><td style="width:90px"><div class="bar"><i style="width:'+(x.a/mx*100)+'%"></i></div></td></tr>';}).join('')+'</tbody></table>';
+}
+function renderHeat(recs,el){
+  var stages=DIMS.stage||[];
+  if(!stages.length){document.getElementById(el).innerHTML='<p class="sub">'+t('noStage')+'</p>';return;}
+  function clr(v){var x=Math.max(0,Math.min(1,(v-55)/40));var r=Math.round(248-(248-52)*x),g=Math.round(113+(211-113)*x),b=Math.round(113+(153-113)*x);return 'rgb('+r+','+g+','+b+')';}
+  var h='<table class="heat"><thead><tr><th></th>'+SUBJECTS.map(function(s){return '<th>'+tv(s).split(' ')[0]+'</th>';}).join('')+'</tr></thead><tbody>';
+  stages.forEach(function(st){h+='<tr><th style="text-align:start;color:var(--txt-dim)">'+tv(st)+'</th>';SUBJECTS.forEach(function(s){var v=avg(recs.filter(function(r){return r.stage===st&&r.subject===s;}).map(gs));h+='<td style="background:'+(v?clr(v):'var(--line)')+'">'+(v?r1(v):'–')+'</td>';});h+='</tr>';});
+  h+='</tbody></table><div class="legend"><span><i class="dot" style="background:#f87171"></i>'+t('low')+'</span><span><i class="dot" style="background:#fbbf24"></i>'+t('mid')+'</span><span><i class="dot" style="background:#34d399"></i>'+t('high')+'</span></div>';
+  document.getElementById(el).innerHTML=h;
+}
+function L(en,ar){return LANG==='ar'?ar:en;}
+function genInsights(d){
+  var out=[];
+  if(!d.length){return '<div class="insight"><div class="bdg b-info">ℹ️</div><div><b>'+L('No data','لا توجد بيانات')+'</b><p>'+L('Adjust the filters to see insights.','عدّل الفلاتر لعرض الاستنتاجات.')+'</p></div></div>';}
+  var nStu=uniq(d.map(function(r){return r.id;})).length;
+  var sStats=SUBJECTS.map(function(s){return {s:s,a:avg(d.filter(function(r){return r.subject===s;}).map(gs))};}).filter(function(x){return x.a;}).sort(function(x,y){return y.a-x.a;});
+  if(sStats.length>1){var gap=r1(sStats[0].a-sStats[sStats.length-1].a);
+    out.push(['good','🏅',L('Strongest subject: ','أقوى مادة: ')+tv(sStats[0].s)+' ('+r1(sStats[0].a)+'%)',
+      L('Leads '+tv(sStats[sStats.length-1].s)+' ('+r1(sStats[sStats.length-1].a)+'%) by '+gap+' points. Consider sharing its teaching practices with weaker subjects.',
+        'تتقدّم على '+tv(sStats[sStats.length-1].s)+' ('+r1(sStats[sStats.length-1].a)+'٪) بفارق '+gap+' نقطة. يُنصح بنقل ممارساتها التدريسية للمواد الأضعف.')]);}
+  sStats.forEach(function(x){var tg=targetFor(x.s,F.year);var diff=r1(x.a-tg);
+    if(diff<0) out.push(['warn','🎯',tv(x.s)+' '+L('below target','تحت الهدف'),
+      L(tv(x.s)+' averages '+r1(x.a)+'%, '+Math.abs(diff)+' points under its '+tg+'% target — flag for academic support.',
+        tv(x.s)+' بمتوسط '+r1(x.a)+'٪، أقل بـ '+Math.abs(diff)+' نقطة عن هدفها '+tg+'٪ — تستدعي خطة دعم.')]);
+    else out.push(['good','🎯',tv(x.s)+' '+L('meets target','حقّقت الهدف'),
+      L(tv(x.s)+' is '+diff+' points above its '+tg+'% target.',tv(x.s)+' تتجاوز هدفها '+tg+'٪ بـ '+diff+' نقطة.')]);});
+  var improves=[];
+  (DIMS.grade||[]).forEach(function(g){SUBJECTS.forEach(function(s){var seq=subjAssess(s);if(seq.length<2)return;var rs=d.filter(function(r){return r.grade===g&&r.subject===s;});if(rs.length<3)return;var f=avg(rs.map(function(r){return r.assess[seq[0]];}).filter(function(v){return v!=null;}));var l=avg(rs.map(function(r){return r.assess[seq[seq.length-1]];}).filter(function(v){return v!=null;}));improves.push({g:g,s:s,d:l-f,f:seq[0],l:seq[seq.length-1]});});});
+  improves.sort(function(a,b){return b.d-a.d;});
+  if(improves.length&&improves[0].d>5)out.push(['good','📈',L('Most improved: ','الأكثر تحسّنًا: ')+improves[0].g+' '+tv(improves[0].s).split(' ')[0],L('Rose '+r1(improves[0].d)+'% from '+improves[0].f+' to '+improves[0].l+' — clear upward trend.','ارتفع '+r1(improves[0].d)+'٪ من '+improves[0].f+' إلى '+improves[0].l+' — اتجاه صاعد واضح.')]);
+  if(improves.length){var worst=improves[improves.length-1];if(worst.d<-5)out.push(['bad','📉',L('Largest decline: ','الأكبر تراجعًا: ')+worst.g+' '+tv(worst.s).split(' ')[0],L('Dropped '+r1(worst.d)+'% from '+worst.f+' to '+worst.l+'. Review pacing & revision.','تراجع '+r1(worst.d)+'٪ من '+worst.f+' إلى '+worst.l+'. راجع الخطة والمراجعة.')]);}
+  var cStats=(DIMS.class||[]).map(function(c){return {c:c,a:avg(d.filter(function(r){return r.class===c;}).map(gs))};}).filter(function(x){return x.a;}).sort(function(x,y){return y.a-x.a;});
+  if(cStats.length){out.push(['info','🏫',L('Top class: ','أعلى فصل: ')+cStats[0].c+' ('+r1(cStats[0].a)+'%)',L('Highest-performing section in the current selection.','أعلى شعبة أداءً ضمن التحديد الحالي.')]);var wc=cStats[cStats.length-1];if(wc.a<70)out.push(['bad','🚨',L('Needs intervention: ','يحتاج تدخّلًا: ')+wc.c+' ('+r1(wc.a)+'%)',L('Lowest section average — recommend a targeted plan and monitoring.','أدنى متوسط شعبة — يُنصح بخطة مركّزة ومتابعة.')]);}
+  var risk=uniq(d.filter(function(r){return gs(r)<RISK;}).map(function(r){return r.id;})).length;
+  if(risk>0)out.push(['warn','⚠️',L(risk+' students at risk','طلاب في خطر: '+risk),L(r1(risk/nStu*100)+'% of students have at least one subject below '+RISK+'%. Prioritise for support.',r1(risk/nStu*100)+'٪ من الطلاب لديهم مادة على الأقل تحت '+RISK+'٪. أولويتهم للدعم.')]);
+  var sd=stdev(d.map(gs));
+  out.push([sd<8?'good':sd<14?'info':'warn','📐',L('Score consistency','تجانس الدرجات')+' (SD '+r1(sd)+')',sd<8?L('Scores are tightly clustered — performance is consistent.','الدرجات متقاربة — الأداء متجانس.'):sd<14?L('Moderate spread between students.','تشتّت متوسط بين الطلاب.'):L('Wide spread — large gaps; consider differentiated teaching.','تشتّت واسع — فجوات كبيرة؛ يُنصح بالتعليم المتمايز.')]);
+  if((DIMS.school||[]).length>1){var sc=DIMS.school.map(function(x){return {n:x,a:avg(d.filter(function(r){return r.school===x;}).map(gs))};}).sort(function(a,b){return b.a-a.a;});var sgap=r1(sc[0].a-sc[sc.length-1].a);if(sgap>3)out.push(['info','🏢',L('School gap','فارق المدارس'),L(tv(sc[0].n)+' leads '+tv(sc[sc.length-1].n)+' by '+sgap+' points ('+r1(sc[0].a)+'% vs '+r1(sc[sc.length-1].a)+'%).',tv(sc[0].n)+' متقدّمة على '+tv(sc[sc.length-1].n)+' بـ '+sgap+' نقطة ('+r1(sc[0].a)+'٪ مقابل '+r1(sc[sc.length-1].a)+'٪).')]);}
+  return out.slice(0,12).map(function(a){return '<div class="insight"><div class="bdg b-'+a[0]+'">'+a[1]+'</div><div><b>'+a[2]+'</b><p>'+a[3]+'</p></div></div>';}).join('');
+}
+/* ====================== VIEWS ============================================================ */
+function vExec(){
+  var d=applyFilters(RECORDS);var scores=d.map(gs);
+  var above=d.filter(function(r){return gs(r)>=r.target;}).length;
+  var below=d.filter(function(r){return gs(r)<r.target;}).length;
+  var atRisk=uniq(d.filter(function(r){return gs(r)<RISK;}).map(function(r){return r.id;})).length;
+  var sd=r1(stdev(scores));
+  var cards=kpiCard(t('kTotal'),'👥',uniq(d.map(function(r){return r.id;})).length,t('enrolled'),'mut')+
+    kpiCard(t('kAvg'),'📊',r1(avg(scores))+'%',(avg(scores)>=DEFAULT_TARGET?t('aboveT'):t('belowT')),avg(scores)>=DEFAULT_TARGET?'up':'down')+
+    kpiCard(t('kHigh'),'🥇',(scores.length?Math.max.apply(null,scores):0)+'%',t('topPerf'),'up')+
+    kpiCard(t('kLow'),'🔻',(scores.length?Math.min.apply(null,scores):0)+'%',t('needsSup'),'down')+
+    kpiCard(t('kAbove'),'✅',above,r1(above/(d.length||1)*100)+t('ofRecords'),'up')+
+    kpiCard(t('kBelow'),'⚠️',below,r1(below/(d.length||1)*100)+t('ofRecords'),'down')+
+    kpiCard(t('kRisk'),'🚨',atRisk,'< '+RISK+'%','down')+
+    kpiCard(t('kSD'),'📐',sd,(sd<8?t('sdLow'):sd<14?t('sdMid'):t('sdHigh')),sd<8?'up':sd<14?'mut':'down')+
+    kpiCard(t('kClasses'),'🏫',uniq(d.map(function(r){return r.class;}).filter(Boolean)).length,t('activeSec'),'mut')+
+    kpiCard(t('kTeachers'),'👩‍🏫',uniq(d.map(function(r){return r.teacher;}).filter(Boolean)).length,t('instructors'),'mut');
+  if((DIMS.school||[]).length>1)cards+=kpiCard(t('kSchools'),'🏢',uniq(d.map(function(r){return r.school;}).filter(Boolean)).length,t('inScope'),'mut');
+  C().innerHTML=filterBar(['school','stage','grade','class','subject','teacher','assess','semester','year','perf'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+cards+'</div>'+
+    '<div class="row r-23" style="margin-bottom:14px"><div class="panel"><h3>📈 '+t('subjCompare')+'</h3><div class="sub">'+t('avgPerSubject')+'</div><div class="cv"><canvas id="cSubj"></canvas></div></div>'+
+    '<div class="panel"><h3>🎯 '+t('perfDist')+'</h3><div class="sub">'+t('spreadLetters')+'</div><div class="cv"><canvas id="cDist"></canvas></div></div></div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>🏆 '+t('topClasses')+'</h3><div class="sub">'+t('highestSec')+'</div><div id="topCls"></div></div>'+
+    '<div class="panel"><h3>🚨 '+t('lowClasses')+'</h3><div class="sub">'+t('lowestSec')+'</div><div id="lowCls"></div></div></div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>🌡️ '+t('heatmap')+'</h3><div class="sub">'+t('intensity')+'</div><div id="heat"></div></div>'+
+    '<div class="panel"><h3>💡 '+t('autoInsights')+'</h3><div class="sub">'+t('engineHi')+'</div><div id="ins"></div></div></div>';
+  bindFilters();
+  var sAvg=SUBJECTS.map(function(s){return r1(avg(d.filter(function(r){return r.subject===s;}).map(gs)));});
+  mk(document.getElementById('cSubj'),{type:'bar',data:{labels:SUBJECTS.map(tv),datasets:[{data:sAvg,backgroundColor:PAL,borderRadius:8,maxBarThickness:70}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  var perf=DIMS.perf||[];
+  mk(document.getElementById('cDist'),{type:'doughnut',data:{labels:perf,datasets:[{data:perf.map(function(p){return d.filter(function(r){return r.perf===p;}).length;}),backgroundColor:PAL,borderWidth:0}]},
+    options:baseOpts({cutout:'62%',scales:{},plugins:{legend:{position:'right',labels:{color:css('--txt-dim'),font:{size:11},boxWidth:11}}}})});
+  var cls=uniq(d.map(function(r){return r.class;}).filter(Boolean)).map(function(c){return {n:c,a:avg(d.filter(function(r){return r.class===c;}).map(gs))};});
+  leaderTable(cls,'topCls',5,true); leaderTable(cls,'lowCls',5,false);
+  renderHeat(d,'heat');
+  document.getElementById('ins').innerHTML=genInsights(d);
+}
+function vInsights(){var d=applyFilters(RECORDS);C().innerHTML=filterBar(['school','stage','grade','subject'])+'<div class="panel"><h3>💡 '+t('insights')+'</h3><div class="sub">'+t('insightsSub')+'</div><div>'+genInsights(d)+'</div></div>';bindFilters();}
+
+function vSubject(sub){
+  F.subject=sub;var d=applyFilters(RECORDS);var a=r1(avg(d.map(gs)));var seq=subjAssess(sub);var topPerf=(DIMS.perf||[])[0]||'—';
+  C().innerHTML=filterBar(['school','stage','grade','class','perf','assess','semester','year'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+
+    kpiCard(t('subjAvg'),'📊',a+'%',(a>=DEFAULT_TARGET?t('aboveT'):t('belowT')),a>=DEFAULT_TARGET?'up':'down')+
+    kpiCard(t('students'),'👥',uniq(d.map(function(r){return r.id;})).length,t('inSubject'),'mut')+
+    kpiCard(t('highest'),'🥇',(d.length?Math.max.apply(null,d.map(gs)):0)+'%','','up')+
+    kpiCard(t('mastery')+' ('+topPerf+')','🌟',d.filter(function(r){return r.perf===topPerf;}).length,'','up')+
+    kpiCard(t('atRisk'),'🚨',d.filter(function(r){return gs(r)<RISK;}).length,'< '+RISK+'%','down')+'</div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>🧪 '+t('assessAnalysis')+'</h3><div class="sub">'+t('assessAcross')+'</div><div class="cv"><canvas id="sA"></canvas></div></div>'+
+    '<div class="panel"><h3>🎯 '+t('perfDist')+'</h3><div class="sub">'+t('gradeFilteredDist')+'</div><div class="cv"><canvas id="sB"></canvas></div></div></div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>🏫 '+t('classCompare')+'</h3><div class="sub">'+t('avgByClass')+'</div><div class="cv sm"><canvas id="sD"></canvas></div></div>'+
+    '<div class="panel"><h3>📈 '+t('trend')+'</h3><div class="sub">'+t('progression')+'</div><div class="cv sm"><canvas id="sE"></canvas></div></div></div>'+
+    '<div class="panel"><h3>🌱 '+t('growthA')+'</h3><div class="sub">'+(seq.length?seq[0]+' → '+seq[seq.length-1]:'')+' '+t('byGrade')+'</div><div class="cv"><canvas id="sF"></canvas></div></div>';
+  bindFilters();
+  var aAvg=seq.map(function(k){return r1(avg(d.map(function(r){return r.assess[k];}).filter(function(v){return v!=null;})));});
+  mk(document.getElementById('sA'),{type:'radar',data:{labels:seq,datasets:[{label:tv(sub),data:aAvg,backgroundColor:'rgba(91,140,255,.22)',borderColor:css('--brand'),pointBackgroundColor:css('--accent'),borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:css('--txt-dim')}}},scales:{r:{min:0,max:100,grid:{color:gridClr()},angleLines:{color:gridClr()},pointLabels:{color:css('--txt-dim'),font:{size:10}},ticks:{display:false}}}}});
+  var perf=DIMS.perf||[];
+  mk(document.getElementById('sB'),{type:'doughnut',data:{labels:perf,datasets:[{data:perf.map(function(p){return d.filter(function(r){return r.perf===p;}).length;}),backgroundColor:PAL,borderWidth:0}]},
+    options:baseOpts({cutout:'60%',scales:{},plugins:{legend:{position:'right',labels:{color:css('--txt-dim'),boxWidth:11,font:{size:11}}}}})});
+  var cs=uniq(d.map(function(r){return r.class;}).filter(Boolean)).sort();
+  mk(document.getElementById('sD'),{type:'bar',data:{labels:cs,datasets:[{data:cs.map(function(c){return r1(avg(d.filter(function(r){return r.class===c;}).map(gs)));}),backgroundColor:css('--accent'),borderRadius:7}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{size:9}}}}})});
+  var tr=seq.map(function(k){return r1(avg(d.map(function(r){return r.assess[k];}).filter(function(v){return v!=null;})));});
+  var ctx=document.getElementById('sE').getContext('2d');
+  mk(ctx,{type:'line',data:{labels:seq,datasets:[{label:'Avg',data:tr,borderColor:css('--brand'),backgroundColor:grad(ctx,'rgba(91,140,255,.35)','rgba(91,140,255,0)'),fill:true,tension:.4,pointRadius:4,pointBackgroundColor:css('--accent')}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  var gs2=GRADE_ORDER.filter(function(g){return d.some(function(r){return r.grade===g;});});var first=seq[0],last=seq[seq.length-1];
+  var gv=gs2.map(function(g){var rs=d.filter(function(r){return r.grade===g;});return seq.length>1?r1(avg(rs.map(function(r){return r.assess[last];}).filter(function(v){return v!=null;}))-avg(rs.map(function(r){return r.assess[first];}).filter(function(v){return v!=null;}))):0;});
+  mk(document.getElementById('sF'),{type:'bar',data:{labels:gs2,datasets:[{data:gv,backgroundColor:gv.map(function(v){return v>=0?css('--good'):css('--bad');}),borderRadius:7}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{size:10}}}}})});
+}
+
+function vStage(){
+  var d=applyFilters(RECORDS);var stages=DIMS.stage||[];
+  if(!stages.length){C().innerHTML='<div class="panel"><h3>'+t('stage')+'</h3><p class="sub">'+t('noStage')+'</p></div>';return;}
+  var stats=stages.map(function(s){return {s:s,a:avg(d.filter(function(r){return r.stage===s;}).map(gs))};}).sort(function(x,y){return y.a-x.a;});
+  C().innerHTML=filterBar(['school','subject','assess','semester'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+kpiCard(t('highStage'),'🏆',tv(stats[0].s),r1(stats[0].a)+'%','up')+kpiCard(t('lowStage'),'🔻',tv(stats[stats.length-1].s),r1(stats[stats.length-1].a)+'%','down')+kpiCard(t('stagesTracked'),'🏛️',stats.length,t('inData'),'mut')+'</div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>🏛️ '+t('stageRank')+'</h3><div class="sub">'+t('avgPerStage')+'</div><div id="stRank"></div></div>'+
+    '<div class="panel"><h3>🌡️ '+t('subjByStage')+'</h3><div class="sub">'+t('intensity')+'</div><div id="stHeat"></div></div></div>'+
+    '<div class="panel"><h3>📊 '+t('subjByStage')+'</h3><div class="sub">'+t('avgPerStage')+'</div><div class="cv"><canvas id="stBar"></canvas></div></div>';
+  bindFilters();
+  leaderTable(stats.map(function(x){return {n:tv(x.s),a:x.a};}),'stRank',stages.length,true);
+  renderHeat(d,'stHeat');
+  mk(document.getElementById('stBar'),{type:'bar',data:{labels:stages.map(tv),datasets:SUBJECTS.map(function(s,i){return {label:tv(s).split(' ')[0],data:stages.map(function(st){return r1(avg(d.filter(function(r){return r.stage===st&&r.subject===s;}).map(gs)));}),backgroundColor:PAL[i%PAL.length],borderRadius:6};})},
+    options:baseOpts({scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+}
+
+function vGrade(){
+  var d=applyFilters(RECORDS);var gs2=GRADE_ORDER.map(function(g){return {g:g,a:avg(d.filter(function(r){return r.grade===g;}).map(gs))};}).filter(function(x){return x.a;});
+  if(!gs2.length){C().innerHTML='<div class="panel"><h3>'+t('grade')+'</h3><p class="sub">'+t('noGrade')+'</p></div>';return;}
+  var sorted=gs2.slice().sort(function(x,y){return y.a-x.a;});
+  C().innerHTML=filterBar(['school','stage','subject','assess','semester'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+kpiCard(t('topGrade'),'🥇',sorted[0].g,r1(sorted[0].a)+'%','up')+kpiCard(t('lowGrade'),'🔻',sorted[sorted.length-1].g,r1(sorted[sorted.length-1].a)+'%','down')+kpiCard(t('gradesTracked'),'🎓',gs2.length,t('inData'),'mut')+kpiCard(t('spread'),'↔️',r1(sorted[0].a-sorted[sorted.length-1].a)+'%',t('topVsBottom'),'mut')+'</div>'+
+    '<div class="panel" style="margin-bottom:14px"><h3>🎓 '+t('gradeRankAvg')+'</h3><div class="sub">'+t('byGradeLevel')+'</div><div class="cv lg"><canvas id="grBar"></canvas></div></div>'+
+    '<div class="row r-2"><div class="panel"><h3>📊 '+t('subjByGrade')+'</h3><div class="sub">'+t('avgPerSubject')+'</div><div class="cv"><canvas id="grSub"></canvas></div></div>'+
+    '<div class="panel"><h3>🏆 '+t('highLowGrades')+'</h3><div class="sub">'+t('ranked')+'</div><div id="grRank"></div></div></div>';
+  bindFilters();
+  var og=gs2.map(function(x){return x.g;});
+  mk(document.getElementById('grBar'),{type:'bar',data:{labels:og,datasets:[{data:gs2.map(function(x){return r1(x.a);}),backgroundColor:gs2.map(function(x){return x.a>=DEFAULT_TARGET?css('--good'):x.a>=70?css('--warn'):css('--bad');}),borderRadius:7}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  mk(document.getElementById('grSub'),{type:'bar',data:{labels:og,datasets:SUBJECTS.map(function(s,i){return {label:tv(s).split(' ')[0],data:og.map(function(g){return r1(avg(d.filter(function(r){return r.grade===g&&r.subject===s;}).map(gs)));}),backgroundColor:PAL[i%PAL.length],borderRadius:5};})},
+    options:baseOpts({scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{size:9}}}}})});
+  leaderTable(sorted.map(function(x){return {n:x.g,a:x.a};}),'grRank',gs2.length,true);
+}
+
+function vClass(){
+  var d=applyFilters(RECORDS);var clsArr=uniq(d.map(function(r){return r.class;}).filter(Boolean)).map(function(c){return {c:c,a:avg(d.filter(function(r){return r.class===c;}).map(gs))};}).sort(function(x,y){return y.a-x.a;});
+  if(!clsArr.length){C().innerHTML='<div class="panel"><h3>'+t('classv')+'</h3><p class="sub">'+t('noClass')+'</p></div>';return;}
+  var sel=F.class||clsArr[0].c;var cd=d.filter(function(r){return r.class===sel;});
+  var studs=uniq(cd.map(function(r){return r.id;})).map(function(id){return {id:id,n:(cd.find(function(r){return r.id===id;})||{}).name,a:avg(cd.filter(function(r){return r.id===id;}).map(gs))};}).sort(function(x,y){return y.a-x.a;});
+  C().innerHTML=filterBar(['school','stage','grade','class','subject','perf','assess','semester','year'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+kpiCard(t('fClass'),'🏫',sel,t('selClass'),'mut')+kpiCard(t('classAvg'),'📊',r1(avg(cd.map(gs)))+'%','','up')+kpiCard(t('rank'),'🏆','#'+(clsArr.findIndex(function(x){return x.c===sel;})+1),clsArr.length+' '+t('ofClasses'),'mut')+kpiCard(t('highStudent'),'🥇',studs[0]?r1(studs[0].a)+'%':'–',studs[0]?studs[0].n:'','up')+kpiCard(t('lowStudent'),'🔻',studs.length?r1(studs[studs.length-1].a)+'%':'–',studs.length?studs[studs.length-1].n:'','down')+'</div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>📊 '+t('subjCompare')+'</h3><div class="sub">'+sel+'</div><div class="cv"><canvas id="clSub"></canvas></div></div>'+
+    '<div class="panel"><h3>🎯 '+t('perfDist')+'</h3><div class="sub">'+t('perfWithin')+'</div><div class="cv"><canvas id="clAch"></canvas></div></div></div>'+
+    '<div class="panel" style="margin-bottom:14px"><h3>📋 '+t('classRoster')+'</h3><div class="sub">'+t('rosterSub')+'</div><div id="clRoster"></div></div>'+
+    '<div class="panel"><h3>🏆 '+t('allClassesRanked')+'</h3><div class="sub">'+t('drillHint')+'</div><div id="clRank"></div></div>';
+  bindFilters();
+  var roster=cd.slice().sort(function(a,b){return a.name===b.name?(a.subject<b.subject?-1:1):(a.name<b.name?-1:1);});
+  function gclr(p){return p==='F'?'var(--bad)':(p==='D'||p==='C')?'var(--warn)':'var(--good)';}
+  document.getElementById('clRoster').innerHTML=roster.length?('<table><thead><tr><th>'+t('cStudent')+'</th><th>'+t('fSubject')+'</th><th>'+t('cScore')+'</th><th>'+t('fPerf')+'</th></tr></thead><tbody>'+
+    roster.map(function(r){return '<tr><td style="color:var(--txt);font-weight:600">'+r.name+'</td><td>'+tv(r.subject)+'</td><td style="font-weight:700">'+gs(r)+'%</td><td><span class="rank rkx" style="background:'+gclr(r.perf)+'22;color:'+gclr(r.perf)+';width:auto;padding:0 8px">'+r.perf+'</span></td></tr>';}).join('')+'</tbody></table>'):'<p class="sub">'+t('noData')+'</p>';
+  mk(document.getElementById('clSub'),{type:'bar',data:{labels:SUBJECTS.map(function(s){return tv(s).split(' ')[0];}),datasets:[{data:SUBJECTS.map(function(s){return r1(avg(cd.filter(function(r){return r.subject===s;}).map(gs)));}),backgroundColor:PAL,borderRadius:8,maxBarThickness:60}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  var perf=DIMS.perf||[];
+  mk(document.getElementById('clAch'),{type:'polarArea',data:{labels:perf,datasets:[{data:perf.map(function(p){return cd.filter(function(r){return r.perf===p;}).length;}),backgroundColor:PAL.map(function(c){return c+'99';})}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:css('--txt-dim'),boxWidth:11,font:{size:11}}}},scales:{r:{grid:{color:gridClr()},ticks:{display:false}}}}});
+  var mx=Math.max.apply(null,clsArr.map(function(x){return x.a;}))||1;
+  document.getElementById('clRank').innerHTML='<table><tbody>'+clsArr.map(function(x,i){return '<tr style="'+(x.c===sel?'background:var(--panel-2)':'')+'"><td style="width:30px"><span class="rank '+(i<3?'rk'+(i+1):'rkx')+'">'+(i+1)+'</span></td><td style="color:var(--txt);font-weight:600">'+x.c+'</td><td style="width:55px;font-weight:700">'+r1(x.a)+'%</td><td style="width:120px"><div class="bar"><i style="width:'+(x.a/mx*100)+'%"></i></div></td></tr>';}).join('')+'</tbody></table>';
+}
+
+function vTeacherGate(){
+  C().innerHTML='<div class="gate panel"><div class="lk">🔒</div><h3 style="justify-content:center">'+t('teacherLocked')+'</h3><p class="sub" style="text-align:center">'+t('teacherGate')+'</p>'+
+    '<input id="tpw" type="password" placeholder="••••••••" /><button onclick="submitTeacherPass()">'+t('unlock')+'</button><p id="tpwMsg" style="color:var(--bad);font-size:12.5px;margin-top:10px;min-height:16px"></p></div>';
+  var inp=document.getElementById('tpw');inp.focus();inp.onkeydown=function(e){if(e.key==='Enter')submitTeacherPass();};
+}
+function submitTeacherPass(){
+  var pw=document.getElementById('tpw').value;
+  // Role-based: managers/admins bypass password; others need WAAD-2026
+  if(USER_ROLE==='manager'||USER_ROLE==='admin'||pw==='WAAD-2026'){
+    TEACHER_OK=true;render('teacher');
+  }else{
+    document.getElementById('tpwMsg').textContent=t('wrongPass');
+  }
+}
+function vTeacher(){
+  if(!TEACHER_OK){vTeacherGate();return;}
+  var d=applyFilters(RECORDS);var allT=DIMS.teacher||[];
+  if(!allT.length){C().innerHTML='<div class="panel"><h3>'+t('teacher')+'</h3><p class="sub">'+t('noTeacher')+'</p></div>';return;}
+  var sel=F.teacher||allT[0];var td=RECORDS.filter(function(r){return r.teacher===sel;});
+  var schoolAvg=avg(RECORDS.map(function(r){return r.score;}));var tAvg=avg(td.map(function(r){return r.score;}));var eff=r1(50+(tAvg-schoolAvg)*2.5);
+  var tRanks=allT.map(function(tn){return {t:tn,a:avg(RECORDS.filter(function(r){return r.teacher===tn;}).map(function(r){return r.score;}))};}).sort(function(x,y){return y.a-x.a;});
+  C().innerHTML=filterBar(['school','teacher','subject','semester'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+kpiCard(t('teacherAvg'),'📊',r1(tAvg)+'%',(tAvg>=schoolAvg?t('aboveT'):t('belowT')),tAvg>=schoolAvg?'up':'down')+kpiCard(t('students'),'👥',uniq(td.map(function(r){return r.id;})).length,t('taught'),'mut')+kpiCard(t('vsSchool'),'🏫',(tAvg-schoolAvg>=0?'+':'')+r1(tAvg-schoolAvg)+'%',t('school')+': '+r1(schoolAvg)+'%',tAvg>=schoolAvg?'up':'down')+kpiCard(t('effIndex'),'⭐',eff,t('composite'),eff>=50?'up':'down')+kpiCard(t('kClasses'),'🏫',uniq(td.map(function(r){return r.class;}).filter(Boolean)).length,t('taught'),'mut')+'</div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>🏫 '+t('classPerf')+'</h3><div class="sub">'+sel+'</div><div class="cv"><canvas id="tCls"></canvas></div></div>'+
+    '<div class="panel"><h3>📚 '+t('subjPerf')+'</h3><div class="sub">'+t('bySubjectTaught')+'</div><div class="cv"><canvas id="tSub"></canvas></div></div></div>'+
+    '<div class="panel"><h3>👩‍🏫 '+t('compareTeachers')+'</h3><div class="sub">'+t('schoolRanking')+'</div><div id="tRank"></div></div>';
+  bindFilters();
+  var cs=uniq(td.map(function(r){return r.class;}).filter(Boolean)).sort();
+  mk(document.getElementById('tCls'),{type:'bar',data:{labels:cs,datasets:[{data:cs.map(function(c){return r1(avg(td.filter(function(r){return r.class===c;}).map(function(r){return r.score;})));}),backgroundColor:css('--brand'),borderRadius:7}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{size:10}}}}})});
+  var subs=uniq(td.map(function(r){return r.subject;}).filter(Boolean));
+  mk(document.getElementById('tSub'),{type:'bar',data:{labels:subs.map(function(s){return tv(s).split(' ')[0];}),datasets:[{data:subs.map(function(s){return r1(avg(td.filter(function(r){return r.subject===s;}).map(function(r){return r.score;})));}),backgroundColor:css('--brand-2'),borderRadius:8,maxBarThickness:60}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  var mx=Math.max.apply(null,tRanks.map(function(x){return x.a;}))||1;
+  document.getElementById('tRank').innerHTML='<table><tbody>'+tRanks.map(function(x,i){return '<tr style="'+(x.t===sel?'background:var(--panel-2)':'')+'"><td style="width:30px"><span class="rank '+(i<3?'rk'+(i+1):'rkx')+'">'+(i+1)+'</span></td><td style="color:var(--txt);font-weight:600">'+x.t+'</td><td style="width:55px;font-weight:700">'+r1(x.a)+'%</td><td style="width:120px"><div class="bar"><i style="width:'+(x.a/mx*100)+'%"></i></div></td></tr>';}).join('')+'</tbody></table>';
+}
+
+function vStudent(){
+  var pool=applyFilters(RECORDS);
+  var ids=uniq(pool.map(function(r){return r.id;}));
+  if(!ids.length){C().innerHTML=filterBar(['school','stage','grade','class','perf'])+'<div class="panel"><p class="sub">'+t('noData')+'</p></div>';bindFilters();return;}
+  if(ids.indexOf(SELSTU)<0) SELSTU=ids[0];
+  var sel=SELSTU;
+  var sdAll=RECORDS.filter(function(r){return r.id===sel&&(!F.semester||r.semester===F.semester)&&(!F.year||r.year===F.year);});
+  var bySub={}; sdAll.forEach(function(r){bySub[r.subject]=r;}); // one record per subject (latest wins)
+  var sd=Object.keys(bySub).map(function(k){return bySub[k];});
+  if(!sd.length){C().innerHTML=filterBar(['school','stage','grade','class','perf'])+'<div class="panel"><p class="sub">'+t('noData')+'</p></div>';bindFilters();return;}
+  var info=sd[0];
+  var overall=avg(sd.map(function(r){return r.score;}));
+  var risk=overall>=DEFAULT_TARGET?['#34d399',t('riskExcellent')]:overall>=RISK?['#fbbf24',t('riskMonitor')]:['#f87171',t('riskInterv')];
+  var subScores=sd.map(function(r){return {s:r.subject,v:r.score};}).sort(function(a,b){return b.v-a.v;});
+  C().innerHTML=filterBar(['school','stage','grade','class','perf'])+
+    '<div class="panel" style="margin-bottom:14px"><div class="filter" style="max-width:360px"><label>'+t('selStudent')+'</label><select id="stuPick">'+ids.map(function(id){var rr=pool.find(function(r){return r.id===id;});return '<option value="'+id.replace(/"/g,'&quot;')+'" '+(id===sel?'selected':'')+'>'+rr.name+' · '+rr.grade+rr.class+'</option>';}).join('')+'</select></div></div>'+
+    '<div class="panel" style="margin-bottom:14px"><div class="prof-head"><div class="avatar">'+(info.name.split(' ').map(function(x){return x[0];}).join('').slice(0,2))+'</div><div><div style="font-size:20px;font-weight:800">'+info.name+'</div><div class="tags">'+(info.grade?'<span class="tag">🎓 '+info.grade+'</span>':'')+(info.class?'<span class="tag">🏫 '+info.class+'</span>':'')+(info.stage?'<span class="tag">🏛️ '+tv(info.stage)+'</span>':'')+(info.school?'<span class="tag">🏢 '+tv(info.school)+'</span>':'')+'</div></div><div class="risk" style="background:'+risk[0]+'22;color:'+risk[0]+';border:1px solid '+risk[0]+'55">'+t('riskInd')+'<br><span style="font-size:16px">'+risk[1]+'</span></div></div></div>'+
+    '<div class="row r-32" style="margin-bottom:14px"><div class="panel gauge-wrap"><h3>'+t('overall')+'</h3><div class="cv sm" style="height:180px;width:100%"><canvas id="stuGauge"></canvas></div><div style="font-size:30px;font-weight:800;margin-top:-30px">'+r1(overall)+'%</div><div style="color:var(--txt-mut);font-size:12px">'+gradeLetter(overall)+'</div></div>'+
+    '<div class="panel"><h3>📚 '+t('subjScores')+'</h3><div class="sub">'+t('perPerSubject')+'</div><div class="cv"><canvas id="stuSub"></canvas></div></div></div>'+
+    '<div class="row r-2" style="margin-bottom:14px"><div class="panel"><h3>📈 '+t('growthTimeline')+'</h3><div class="sub">'+t('assessProgress')+'</div><div class="cv"><canvas id="stuTrend"></canvas></div></div>'+
+    '<div class="panel"><h3>🧭 '+t('assessRadar')+'</h3><div class="sub">'+t('profileAcross')+'</div><div class="cv"><canvas id="stuRadar"></canvas></div></div></div>'+
+    '<div class="row r-2"><div class="panel"><h3 style="color:var(--good)">💪 '+t('strengths')+'</h3><div class="sub">'+t('topSubjects')+'</div>'+subScores.slice(0,2).map(function(x){return '<div class="list-li"><span class="dot" style="background:var(--good)"></span><b style="color:var(--txt)">'+tv(x.s)+'</b><span style="margin-inline-start:auto;font-weight:700;color:var(--good)">'+x.v+'%</span></div>';}).join('')+'</div>'+
+    '<div class="panel"><h3 style="color:var(--bad)">🎯 '+t('improvements')+'</h3><div class="sub">'+t('needSupport')+'</div>'+subScores.slice(-2).reverse().map(function(x){return '<div class="list-li"><span class="dot" style="background:'+(x.v<RISK?'var(--bad)':'var(--warn)')+'"></span><b style="color:var(--txt)">'+tv(x.s)+'</b><span style="margin-inline-start:auto;font-weight:700;color:'+(x.v<RISK?'var(--bad)':'var(--warn)')+'">'+x.v+'%</span></div>';}).join('')+'</div></div>';
+  bindFilters();
+  document.getElementById('stuPick').onchange=function(e){SELSTU=e.target.value;vStudent();};
+  mk(document.getElementById('stuGauge'),{type:'doughnut',data:{datasets:[{data:[overall,100-overall],backgroundColor:[risk[0],css('--line')],borderWidth:0,circumference:180,rotation:270}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  mk(document.getElementById('stuSub'),{type:'bar',data:{labels:sd.map(function(r){return tv(r.subject).split(' ')[0];}),datasets:[{data:sd.map(function(r){return r.score;}),backgroundColor:sd.map(function(r){return r.score>=DEFAULT_TARGET?css('--good'):r.score>=70?css('--warn'):css('--bad');}),borderRadius:8,maxBarThickness:55}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  var maxLen=Math.max.apply(null,sd.map(function(r){return subjAssess(r.subject).length;}))||1;var xlab=[];for(var i=0;i<maxLen;i++)xlab.push('A'+(i+1));
+  var ctx=document.getElementById('stuTrend').getContext('2d');
+  mk(ctx,{type:'line',data:{labels:xlab,datasets:sd.map(function(r,i){var seq=subjAssess(r.subject);return {label:tv(r.subject).split(' ')[0],data:seq.map(function(k){return r.assess[k];}),borderColor:PAL[i%PAL.length],tension:.4,pointRadius:3,borderWidth:2};})},
+    options:baseOpts({scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  mk(document.getElementById('stuRadar'),{type:'radar',data:{labels:xlab,datasets:sd.map(function(r,i){var seq=subjAssess(r.subject);return {label:tv(r.subject).split(' ')[0],data:seq.map(function(k){return r.assess[k];}),backgroundColor:PAL[i%PAL.length]+'2e',borderColor:PAL[i%PAL.length],borderWidth:2,pointRadius:2};})},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:css('--txt-dim'),boxWidth:11,font:{size:10}}}},scales:{r:{min:0,max:100,grid:{color:gridClr()},angleLines:{color:gridClr()},pointLabels:{color:css('--txt-dim'),font:{size:10}},ticks:{display:false}}}}});
+}
+
+function vRanks(){
+  var d=applyFilters(RECORDS);
+  function panel(items,title,top){var sorted=items.slice().sort(function(a,b){return top?b.a-a.a:a.a-b.a;}).slice(0,10);var mx=Math.max.apply(null,items.map(function(x){return x.a;}))||1;
+    return '<div class="panel"><h3>'+(top?'🏆':'🚨')+' '+title+'</h3><div class="sub">'+(top?t('top10'):t('bottom10'))+'</div><table><tbody>'+sorted.map(function(x,i){return '<tr><td style="width:30px"><span class="rank '+(top&&i<3?'rk'+(i+1):'rkx')+'">'+(i+1)+'</span></td><td style="color:var(--txt);font-weight:600">'+x.n+'</td><td style="width:55px;font-weight:700;color:'+(x.a>=DEFAULT_TARGET?'var(--good)':x.a>=70?'var(--warn)':'var(--bad)')+'">'+r1(x.a)+'%</td><td style="width:80px"><div class="bar"><i style="width:'+(x.a/mx*100)+'%"></i></div></td></tr>';}).join('')+'</tbody></table></div>';}
+  var stu=uniq(d.map(function(r){return r.id;})).map(function(id){return {n:(d.find(function(r){return r.id===id;})||{}).name,a:avg(d.filter(function(r){return r.id===id;}).map(gs))};});
+  var cls=uniq(d.map(function(r){return r.class;}).filter(Boolean)).map(function(c){return {n:c,a:avg(d.filter(function(r){return r.class===c;}).map(gs))};});
+  var grd=GRADE_ORDER.filter(function(g){return d.some(function(r){return r.grade===g;});}).map(function(g){return {n:g,a:avg(d.filter(function(r){return r.grade===g;}).map(gs))};});
+  var html=filterBar(['school','stage','grade','class','subject','teacher','assess','semester','year','perf']);
+  html+='<div class="row r-2" style="margin-bottom:14px">'+panel(stu,t('topStudents'),1)+panel(stu,t('bottomStudents'),0)+'</div>';
+  if(cls.length)html+='<div class="row r-2" style="margin-bottom:14px">'+panel(cls,t('topCls'),1)+panel(cls,t('bottomClasses'),0)+'</div>';
+  if(grd.length)html+='<div class="row r-2" style="margin-bottom:14px">'+panel(grd,t('topGrades'),1)+panel(grd,t('bottomGrades'),0)+'</div>';
+  var perf=DIMS.perf||[];var counts=perf.map(function(p){return d.filter(function(r){return r.perf===p;}).length;});var total=d.length||1;
+  if(perf.length){
+    html+='<div class="grid kpis" style="margin-bottom:14px">'+perf.slice(0,Math.min(4,perf.length)).map(function(p,i){return kpiCard(p,'🏷️',counts[i],r1(counts[i]/total*100)+t('ofRecords'),i<2?'up':'down');}).join('')+'</div>';
+    html+='<div class="row r-2"><div class="panel"><h3>🎯 '+t('perfBars')+'</h3><div class="sub">'+t('countPer')+'</div><div class="cv lg"><canvas id="rkBar"></canvas></div></div><div class="panel"><h3>🍩 '+t('propSpread')+'</h3><div class="sub">'+t('shareEach')+'</div><div class="cv lg"><canvas id="rkDonut"></canvas></div></div></div>';
+  }
+  C().innerHTML=html;bindFilters();
+  if(perf.length){
+    mk(document.getElementById('rkBar'),{type:'bar',data:{labels:perf,datasets:[{data:counts,backgroundColor:PAL,borderRadius:8}]},
+      options:baseOpts({plugins:{legend:{display:false}},scales:{y:{ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{weight:'700'}}}}})});
+    mk(document.getElementById('rkDonut'),{type:'doughnut',data:{labels:perf,datasets:[{data:counts,backgroundColor:PAL,borderWidth:0}]},
+      options:baseOpts({cutout:'58%',scales:{},plugins:{legend:{position:'right',labels:{color:css('--txt-dim'),boxWidth:12,font:{size:12}}}}})});
+  }
+}
+
+function vGrowth(){
+  var d=applyFilters(RECORDS);var maxLen=Math.max.apply(null,SUBJECTS.map(function(s){return subjAssess(s).length;}))||1;var xlab=[];for(var i=0;i<maxLen;i++)xlab.push('A'+(i+1));
+  var cards=SUBJECTS.map(function(s){var seq=subjAssess(s);if(seq.length<2)return '';var f=avg(d.filter(function(r){return r.subject===s;}).map(function(r){return r.assess[seq[0]];}).filter(function(v){return v!=null;}));var l=avg(d.filter(function(r){return r.subject===s;}).map(function(r){return r.assess[seq[seq.length-1]];}).filter(function(v){return v!=null;}));var dl=r1(l-f);return kpiCard(tv(s).split(' ')[0]+' '+t('growthLabel'),'🌱',(dl>=0?'+':'')+dl+'%',seq[0]+'→'+seq[seq.length-1],dl>=0?'up':'down');}).join('');
+  C().innerHTML=filterBar(['school','stage','grade','subject','semester','year'])+'<div class="grid kpis" style="margin-bottom:14px">'+cards+'</div>'+
+    '<div class="row r-2"><div class="panel"><h3>📈 '+t('subjTraj')+'</h3><div class="sub">'+t('avgAcrossSeq')+'</div><div class="cv lg"><canvas id="gwLine"></canvas></div></div>'+
+    '<div class="panel"><h3>🌱 '+t('growthBySG')+'</h3><div class="sub">'+t('firstLast')+'</div><div class="cv lg"><canvas id="gwBar"></canvas></div></div></div>';
+  bindFilters();
+  var ctx=document.getElementById('gwLine').getContext('2d');
+  mk(ctx,{type:'line',data:{labels:xlab,datasets:SUBJECTS.map(function(s,i){var seq=subjAssess(s);return {label:tv(s).split(' ')[0],data:seq.map(function(k){return r1(avg(d.filter(function(r){return r.subject===s;}).map(function(r){return r.assess[k];}).filter(function(v){return v!=null;})));}),borderColor:PAL[i%PAL.length],tension:.4,pointRadius:3,borderWidth:2,fill:false};})},
+    options:baseOpts({scales:{y:{min:0,max:100,ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim')}}}})});
+  var og=GRADE_ORDER.filter(function(g){return d.some(function(r){return r.grade===g;});});
+  mk(document.getElementById('gwBar'),{type:'bar',data:{labels:og,datasets:SUBJECTS.map(function(s,i){var seq=subjAssess(s);var f=seq[0],l=seq[seq.length-1];return {label:tv(s).split(' ')[0],data:og.map(function(g){var rs=d.filter(function(r){return r.grade===g&&r.subject===s;});return rs.length&&seq.length>1?r1(avg(rs.map(function(r){return r.assess[l];}).filter(function(v){return v!=null;}))-avg(rs.map(function(r){return r.assess[f];}).filter(function(v){return v!=null;}))):0;}),backgroundColor:PAL[i%PAL.length],borderRadius:5};})},
+    options:baseOpts({scales:{y:{ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{size:9}}}}})});
+}
+
+function vDist(){
+  var d=applyFilters(RECORDS);var perf=DIMS.perf||[];
+  if(!perf.length){C().innerHTML='<div class="panel"><h3>'+t('dist')+'</h3><p class="sub">'+t('noData')+'</p></div>';return;}
+  var counts=perf.map(function(p){return d.filter(function(r){return r.perf===p;}).length;});var total=d.length||1;
+  C().innerHTML=filterBar(['school','stage','grade','subject','class','perf','semester','year'])+
+    '<div class="grid kpis" style="margin-bottom:14px">'+perf.slice(0,Math.min(4,perf.length)).map(function(p,i){return kpiCard(p,'🏷️',counts[i],r1(counts[i]/total*100)+t('ofRecords'),i<2?'up':'down');}).join('')+'</div>'+
+    '<div class="row r-2"><div class="panel"><h3>🎯 '+t('perfBars')+'</h3><div class="sub">'+t('countPer')+'</div><div class="cv lg"><canvas id="dBar"></canvas></div></div>'+
+    '<div class="panel"><h3>🍩 '+t('propSpread')+'</h3><div class="sub">'+t('shareEach')+'</div><div class="cv lg"><canvas id="dDonut"></canvas></div></div></div>';
+  bindFilters();
+  mk(document.getElementById('dBar'),{type:'bar',data:{labels:perf,datasets:[{data:counts,backgroundColor:PAL,borderRadius:8}]},
+    options:baseOpts({plugins:{legend:{display:false}},scales:{y:{ticks:{color:css('--txt-mut')},grid:{color:gridClr()}},x:{grid:{display:false},ticks:{color:css('--txt-dim'),font:{weight:'700'}}}}})});
+  mk(document.getElementById('dDonut'),{type:'doughnut',data:{labels:perf,datasets:[{data:counts,backgroundColor:PAL,borderWidth:0}]},
+    options:baseOpts({cutout:'58%',scales:{},plugins:{legend:{position:'right',labels:{color:css('--txt-dim'),boxWidth:12,font:{size:12}}}}})});
+}
+
+/* ============================================================ nav + router ============================================================ */
+function buildNav(){
+  var html='<div class="nav-group">'+t('gOverview')+'</div>'+
+    navItem('exec','📊',t('exec'))+navItem('insights','💡',t('insights'))+
+    '<div class="nav-group">'+t('gSubjects')+'</div>'+SUBJECTS.map(function(s){return '<div class="nav-item" data-view="subj:'+s+'"><span class="ic">📘</span> '+tv(s)+'</div>';}).join('')+
+    '<div class="nav-group">'+t('gCohorts')+'</div>'+navItem('stage','🏛️',t('stage'))+navItem('grade','🎓',t('grade'))+navItem('class','🏫',t('classv'))+
+    '<div class="nav-item" data-view="teacher"><span class="ic">👩‍🏫</span> '+t('teacher')+'<span class="lock">🔒</span></div>'+
+    '<div class="nav-group">'+t('gPeople')+'</div>'+navItem('student','🧑‍🎓',t('student'))+navItem('ranks','🏆',t('ranks'))+navItem('growth','📈',t('growth'))+navItem('dist','🎯',t('dist'));
+  document.getElementById('nav').innerHTML=html;
+  setActiveNav(CURRENT);
+}
+function navItem(v,ic,label){return '<div class="nav-item" data-view="'+v+'"><span class="ic">'+ic+'</span> '+label+'</div>';}
+function setActiveNav(v){document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.dataset.view===v);});}
+
+var SUBV={exec:vExec,insights:vInsights,stage:vStage,grade:vGrade,class:vClass,teacher:vTeacher,student:vStudent,ranks:vRanks,growth:vGrowth,dist:vDist};
+function titleFor(v){
+  if(v.indexOf('subj:')===0)return [tv(v.slice(5)),t('subjectSub')];
+  var map={exec:['exec','execSub'],insights:['insights','insightsSub'],stage:['stage','stageSub'],grade:['grade','gradeSub'],class:['classv','classSub'],teacher:['teacher','teacherSub'],student:['student','studentSub'],ranks:['ranks','ranksSub'],growth:['growth','growthSub'],dist:['dist','distSub']};
+  var m=map[v]||map.exec;return [t(m[0]),t(m[1])];
+}
+function render(view){
+  CURRENT=view;destroyCharts();
+  if(view.indexOf('subj:')===0){vSubject(view.slice(5));}
+  else (SUBV[view]||vExec)();
+  var ttl=titleFor(view);
+  document.getElementById('pgTitle').childNodes[0].nodeValue=ttl[0];
+  document.getElementById('pgSub').textContent=ttl[1];
+}
+
+document.getElementById('nav').addEventListener('click',function(e){var it=e.target.closest('.nav-item');if(!it)return;
+  var v=it.dataset.view;if(v.indexOf('subj:')!==0)F.subject='';
+  setActiveNav(v);render(v);document.getElementById('sidebar').classList.remove('open');});
+
+function applyChrome(){
+  document.getElementById('brandName').textContent=t('brand');
+  document.getElementById('liveLbl').textContent=t('live');
+  document.getElementById('globalSearch').placeholder=t('search');
+  document.getElementById('langBtn').textContent=LANG==='en'?'ع':'EN';
+}
+document.getElementById('langBtn').onclick=function(){
+  LANG=LANG==='en'?'ar':'en';
+  document.documentElement.lang=LANG;document.documentElement.dir=LANG==='ar'?'rtl':'ltr';
+  applyChrome();buildNav();render(CURRENT);
+};
+document.getElementById('themeBtn').onclick=function(){var h=document.documentElement,dark=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',dark?'light':'dark');document.getElementById('themeBtn').textContent=dark?'☀️':'🌙';render(CURRENT);};
+document.getElementById('globalSearch').addEventListener('keydown',function(e){if(e.key!=='Enter')return;var q=e.target.value.trim().toLowerCase();if(!q)return;var hit=RECORDS.find(function(r){return r.name.toLowerCase().indexOf(q)>=0;});if(hit){SELSTU=hit.id;setActiveNav('student');render('student');e.target.value='';}else{e.target.value='';}});
+
+/* ============================================================ data load ============================================================ */
+function setStatus(c,m){document.getElementById('srcDot').style.background=c;document.getElementById('srcStatus').textContent=m;}
+function onData(p){try{
+  ingestSupabase(p);buildNav();
+  setStatus('var(--good)',(LANG==='ar'?'حي · ':'Live · ')+uniq(RECORDS.map(function(r){return r.id;})).length+(LANG==='ar'?' طالب · ':' students · ')+RECORDS.length+(LANG==='ar'?' سجل':' records'));
+  document.getElementById('foot').textContent='v3.0 · '+RECORDS.length+(p.schoolName?' · '+p.schoolName:'');
+  if(USER_ROLE==='manager'||USER_ROLE==='admin'){document.getElementById('uploadLinkSb').style.display='flex';}
+  render(CURRENT);var l=document.getElementById('loader');l.style.opacity='0';setTimeout(function(){l.style.display='none';},400);
+}catch(err){onErr(err);}}
+function onErr(err){var msg=(err&&err.message?err.message:err);setStatus('var(--bad)','Error: '+msg);document.getElementById('loader').style.display='none';C().innerHTML='<div class="panel"><h3 style="color:var(--bad)">⚠️ '+t('noData')+'</h3><p class="sub">'+msg+'</p></div>';}
+async function loadData(force){
+  setStatus('var(--warn)','…');
+  try{
+    if(!force&&SUPABASE_CLIENT){var {data:{user}}=await SUPABASE_CLIENT.auth.getUser();if(!user){location.href='/';return;}}
+    var hash=new URLSearchParams(location.hash.slice(1));
+    var at=hash.get('access_token'),rt=hash.get('refresh_token');
+    SUPABASE_CLIENT=supabase.createClient(SUPABASE_URL,ANON_KEY);
+    if(at){await SUPABASE_CLIENT.auth.setSession({access_token:at,refresh_token:rt});history.replaceState(null,'',location.pathname);}
+    var {data:{user}}=await SUPABASE_CLIENT.auth.getUser();
+    if(!user){location.href='/';return;}
+    var {data:profile}=await SUPABASE_CLIENT.from('user_profiles').select('school_id,role').eq('id',user.id).single();
+    var schoolId=profile&&profile.school_id;
+    if(!schoolId){onErr(new Error(LANG==='ar'?'لم يتم تعيين مدرسة لهذا الحساب':'No school assigned to this account'));return;}
+    USER_ROLE=profile&&profile.role||'';
+    var {data:schoolRec}=await SUPABASE_CLIENT.from('schools').select('name').eq('id',schoolId).single();
+    var schoolName=schoolRec&&schoolRec.name||'';
+    var {data:rec}=await SUPABASE_CLIENT.from('school_data').select('rows,config,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(1).single();
+    if(!rec||!rec.rows||!rec.rows.length){onErr(new Error(LANG==='ar'?'لا توجد بيانات — قم برفع بيانات الطلاب أولاً':'No data uploaded yet'));return;}
+    onData({rows:rec.rows,config:rec.config||{},schoolName:schoolName});
+  }catch(err){onErr(err);}
+}
+window.onload=function(){applyChrome();loadData(false);};
 </script>
 </body>
 </html>
