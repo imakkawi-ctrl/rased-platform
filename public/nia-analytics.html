@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>راصد — لوحة التحليل</title>
+<title>Ø±Ø§ØµØ¯ â ÙÙØ­Ø© Ø§ÙØªØ­ÙÙÙ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
@@ -59,7 +59,7 @@ tr:hover td{background:var(--panel2)}
 <div id="loading">
   <div style="text-align:center">
     <div style="width:40px;height:40px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px"></div>
-    <div>جارٍ التحميل...</div>
+    <div>Ø¬Ø§Ø±Ù Ø§ÙØªØ­ÙÙÙ...</div>
   </div>
 </div>
 
@@ -67,34 +67,34 @@ tr:hover td{background:var(--panel2)}
   <header>
     <div class="logo">R</div>
     <div>
-      <div class="hdr-title">راصد</div>
-      <div class="hdr-sub" id="schoolName">لوحة التحليل</div>
+      <div class="hdr-title">Ø±Ø§ØµØ¯</div>
+      <div class="hdr-sub" id="schoolName">ÙÙØ­Ø© Ø§ÙØªØ­ÙÙÙ</div>
     </div>
     <div class="hdr-right">
       <span id="dataLabel" style="font-size:12px;color:var(--dim)"></span>
-      <a id="uploadLink" href="/dashboard/upload" style="display:none;background:linear-gradient(135deg,#5b8cff,#7c5cff);color:#fff;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;text-decoration:none">📤 رفع بيانات</a>
-      <button class="signout-btn" onclick="signOut()">خروج</button>
+      <a id="uploadLink" href="/dashboard/upload" style="display:none;background:linear-gradient(135deg,#5b8cff,#7c5cff);color:#fff;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;text-decoration:none">ð¤ Ø±ÙØ¹ Ø¨ÙØ§ÙØ§Øª</a>
+      <button class="signout-btn" onclick="signOut()">Ø®Ø±ÙØ¬</button>
     </div>
   </header>
 
   <div class="filters">
-    <span style="font-size:12px;color:var(--dim);font-weight:700">تصفية:</span>
-    <select id="fSubject" onchange="applyFilters()"><option value="">كل المواد</option></select>
-    <select id="fGrade" onchange="applyFilters()"><option value="">كل الصفوف</option></select>
-    <select id="fStage" onchange="applyFilters()"><option value="">كل المراحل</option></select>
-    <select id="fSemester" onchange="applyFilters()"><option value="">كل الفصول</option></select>
+    <span style="font-size:12px;color:var(--dim);font-weight:700">ØªØµÙÙØ©:</span>
+    <select id="fSubject" onchange="applyFilters()"><option value="">ÙÙ Ø§ÙÙÙØ§Ø¯</option></select>
+    <select id="fGrade" onchange="applyFilters()"><option value="">ÙÙ Ø§ÙØµÙÙÙ</option></select>
+    <select id="fStage" onchange="applyFilters()"><option value="">ÙÙ Ø§ÙÙØ±Ø§Ø­Ù</option></select>
+    <select id="fSemester" onchange="applyFilters()"><option value="">ÙÙ Ø§ÙÙØµÙÙ</option></select>
     <select id="fQuarter" onchange="applyFilters()">
-      <option value="">كل الأرباع</option>
-      <option value="Q1">الربع الأول Q1</option>
-      <option value="Q2">الربع الثاني Q2</option>
-      <option value="Q3">الربع الثالث Q3</option>
-      <option value="Q4">الربع الرابع Q4</option>
+      <option value="">ÙÙ Ø§ÙØ£Ø±Ø¨Ø§Ø¹</option>
+      <option value="Q1">Ø§ÙØ±Ø¨Ø¹ Ø§ÙØ£ÙÙ Q1</option>
+      <option value="Q2">Ø§ÙØ±Ø¨Ø¹ Ø§ÙØ«Ø§ÙÙ Q2</option>
+      <option value="Q3">Ø§ÙØ±Ø¨Ø¹ Ø§ÙØ«Ø§ÙØ« Q3</option>
+      <option value="Q4">Ø§ÙØ±Ø¨Ø¹ Ø§ÙØ±Ø§Ø¨Ø¹ Q4</option>
     </select>
-    <button class="btn-sm" onclick="resetFilters()">↺ إعادة ضبط</button>
+    <button class="btn-sm" onclick="resetFilters()">âº Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø·</button>
   </div>
 
   <main id="mainContent">
-    <div class="empty"><div class="empty-icon">📊</div><div>جارٍ تحميل البيانات...</div></div>
+    <div class="empty"><div class="empty-icon">ð</div><div>Ø¬Ø§Ø±Ù ØªØ­ÙÙÙ Ø§ÙØ¨ÙØ§ÙØ§Øª...</div></div>
   </main>
 </div>
 
@@ -108,8 +108,12 @@ let SUBJECTS  = []  // ['Math','Arabic Language',...]
 let charts = {}
 const TARGET = 80, RISK = 60
 
-// ─── Init ──────────────────────────────────────────────────
-async function init() {
+// âââ Init ââââââââââââââââââââââââââââââââââââââââââââââââââ
+async function init().catch(err => {
+  document.getElementById('loading').style.display = 'none'
+  document.getElementById('app').style.display = 'flex'
+  showEmpty('خطأ في التحميل: ' + err.message)
+}) {
   const hash = new URLSearchParams(window.location.hash.substring(1))
   if (hash.get('access_token')) {
     await client.auth.setSession({ access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token') })
@@ -118,31 +122,43 @@ async function init() {
   const { data: { user } } = await client.auth.getUser()
   if (!user) { window.location.href = '/auth/login'; return }
 
-  const { data: school } = await client.from('schools').select('name,role').eq('id', user.id).single()
+  // Get user profile to find real school_id and role
+  const { data: profile } = await client.from('user_profiles').select('school_id,role').eq('id', user.id).single()
+  const schoolId = profile?.school_id
+  if (!schoolId) {
+    document.getElementById('loading').style.display = 'none'
+    document.getElementById('app').style.display = 'flex'
+    showEmpty('لم يتم تعيين مدرسة لهذا الحساب')
+    return
+  }
+  const userRole = profile?.role
+  const { data: school } = await client.from('schools').select('name').eq('id', schoolId).single()
   if (school) {
     document.getElementById('schoolName').textContent = school.name
-    if (school.role === 'manager') document.getElementById('uploadLink').style.display = 'inline-flex'
+  }
+  if (userRole === 'manager' || userRole === 'admin') {
+    document.getElementById('uploadLink').style.display = 'inline-flex'
   }
 
   const { data: recs } = await client.from('school_data')
     .select('rows,config,file_name,created_at')
-    .eq('school_id', user.id)
+    .eq('school_id', schoolId)
     .order('created_at', { ascending: false })
     .limit(1)
 
   document.getElementById('loading').style.display = 'none'
   document.getElementById('app').style.display = 'flex'
 
-  if (!recs || !recs.length) { showEmpty('لا توجد بيانات'); return }
+  if (!recs || !recs.length) { showEmpty('ÙØ§ ØªÙØ¬Ø¯ Ø¨ÙØ§ÙØ§Øª'); return }
   const rec = recs[0]
 
-  // ─── Normalize format ────────────────────────────────────
+  // âââ Normalize format ââââââââââââââââââââââââââââââââââââ
   if (rec.config?.format === 'v2' && rec.rows?.length) {
     // New flat format: rows = students array, config.subjects = subjects list
     STUDENTS = rec.rows
     SUBJECTS = rec.config?.subjects || extractSubjects(STUDENTS)
   } else if (rec.rows?.length && rec.rows[0]?.subject) {
-    // V1 legacy: flat grade rows → convert to student records
+    // V1 legacy: flat grade rows â convert to student records
     SUBJECTS = [...new Set(rec.rows.map(r => r.subject).filter(Boolean))]
     const byStudent = {}
     rec.rows.forEach(r => {
@@ -154,11 +170,11 @@ async function init() {
     })
     STUDENTS = Object.values(byStudent)
   } else {
-    showEmpty('لا توجد بيانات'); return
+    showEmpty('ÙØ§ ØªÙØ¬Ø¯ Ø¨ÙØ§ÙØ§Øª'); return
   }
 
   const ts = rec.created_at ? new Date(rec.created_at).toLocaleDateString('ar-SA') : ''
-  document.getElementById('dataLabel').textContent = (rec.file_name||'') + (ts ? ' · '+ts : '')
+  document.getElementById('dataLabel').textContent = (rec.file_name||'') + (ts ? ' Â· '+ts : '')
 
   populateFilters()
   applyFilters()
@@ -170,15 +186,15 @@ function extractSubjects(students) {
   return [...s]
 }
 
-// ─── Filters ───────────────────────────────────────────────
+// âââ Filters âââââââââââââââââââââââââââââââââââââââââââââââ
 function populateFilters() {
   const grades    = [...new Set(STUDENTS.map(s => s.grade).filter(Boolean))].sort()
   const stages    = [...new Set(STUDENTS.map(s => s.stage).filter(Boolean))].sort()
   const semesters = [...new Set(STUDENTS.map(s => s.semester).filter(Boolean))].sort()
-  fillSelect('fSubject', SUBJECTS, 'كل المواد')
-  fillSelect('fGrade', grades, 'كل الصفوف')
-  fillSelect('fStage', stages, 'كل المراحل')
-  fillSelect('fSemester', semesters, 'كل الفصول')
+  fillSelect('fSubject', SUBJECTS, 'ÙÙ Ø§ÙÙÙØ§Ø¯')
+  fillSelect('fGrade', grades, 'ÙÙ Ø§ÙØµÙÙÙ')
+  fillSelect('fStage', stages, 'ÙÙ Ø§ÙÙØ±Ø§Ø­Ù')
+  fillSelect('fSemester', semesters, 'ÙÙ Ø§ÙÙØµÙÙ')
 }
 
 function fillSelect(id, vals, placeholder) {
@@ -207,7 +223,7 @@ function applyFilters() {
   render(filtered, sub, qrt)
 }
 
-// ─── Score helpers ──────────────────────────────────────────
+// âââ Score helpers ââââââââââââââââââââââââââââââââââââââââââ
 function studentAvg(s, subjectFilter, quarterFilter) {
   const vals = []
   const subjsToCheck = subjectFilter ? [subjectFilter] : SUBJECTS
@@ -235,12 +251,12 @@ function subjectAvg(students, subj, quarter) {
 
 function clr(v) { return v >= TARGET ? 'var(--green)' : v >= RISK ? 'var(--yellow)' : 'var(--red)' }
 function cls(v) { return v >= TARGET ? 'badge-green' : v >= RISK ? 'badge-yellow' : 'badge-red' }
-function lbl(v) { return v >= TARGET ? 'فوق الهدف' : v >= RISK ? 'قريب' : 'يحتاج دعم' }
+function lbl(v) { return v >= TARGET ? 'ÙÙÙ Ø§ÙÙØ¯Ù' : v >= RISK ? 'ÙØ±ÙØ¨' : 'ÙØ­ØªØ§Ø¬ Ø¯Ø¹Ù' }
 
-// ─── Render ────────────────────────────────────────────────
+// âââ Render ââââââââââââââââââââââââââââââââââââââââââââââââ
 function render(students, subjectFilter, quarterFilter) {
   if (!students.length) {
-    document.getElementById('mainContent').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>لا توجد نتائج</div></div>'
+    document.getElementById('mainContent').innerHTML = '<div class="empty"><div class="empty-icon">ð</div><div>ÙØ§ ØªÙØ¬Ø¯ ÙØªØ§Ø¦Ø¬</div></div>'
     return
   }
 
@@ -264,7 +280,7 @@ function render(students, subjectFilter, quarterFilter) {
   // Grade stats
   const gradeMap = {}
   students.forEach(s => {
-    const g = s.grade || '—'
+    const g = s.grade || 'â'
     const v = studentAvg(s, subjectFilter, quarterFilter)
     if (!isNaN(v)) { if (!gradeMap[g]) gradeMap[g] = []; gradeMap[g].push(v) }
   })
@@ -275,7 +291,7 @@ function render(students, subjectFilter, quarterFilter) {
   // Stage stats
   const stageMap = {}
   students.forEach(s => {
-    const g = s.stage || '—'
+    const g = s.stage || 'â'
     const v = studentAvg(s, subjectFilter, quarterFilter)
     if (!isNaN(v)) { if (!stageMap[g]) stageMap[g] = []; stageMap[g].push(v) }
   })
@@ -310,40 +326,40 @@ function render(students, subjectFilter, quarterFilter) {
     <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="kpi-label">الطلاب</div>
+        <div class="kpi-label">Ø§ÙØ·ÙØ§Ø¨</div>
         <div class="kpi-val" style="color:var(--brand)">${students.length}</div>
-        <div class="kpi-sub">${SUBJECTS.length} مادة</div>
+        <div class="kpi-sub">${SUBJECTS.length} ÙØ§Ø¯Ø©</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">متوسط الأداء</div>
-        <div class="kpi-val" style="color:${clr(overallAvg)}">${isNaN(overallAvg)?'—':overallAvg.toFixed(1)+'%'}</div>
-        <div class="kpi-sub">الهدف: ${TARGET}%</div>
+        <div class="kpi-label">ÙØªÙØ³Ø· Ø§ÙØ£Ø¯Ø§Ø¡</div>
+        <div class="kpi-val" style="color:${clr(overallAvg)}">${isNaN(overallAvg)?'â':overallAvg.toFixed(1)+'%'}</div>
+        <div class="kpi-sub">Ø§ÙÙØ¯Ù: ${TARGET}%</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">فوق الهدف</div>
+        <div class="kpi-label">ÙÙÙ Ø§ÙÙØ¯Ù</div>
         <div class="kpi-val" style="color:var(--green)">${aboveTarget}</div>
-        <div class="kpi-sub">${avgs.length ? ((aboveTarget/avgs.length)*100).toFixed(1)+'%' : '—'}</div>
+        <div class="kpi-sub">${avgs.length ? ((aboveTarget/avgs.length)*100).toFixed(1)+'%' : 'â'}</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">في خطر</div>
+        <div class="kpi-label">ÙÙ Ø®Ø·Ø±</div>
         <div class="kpi-val" style="color:var(--red)">${atRisk}</div>
-        <div class="kpi-sub">أقل من ${RISK}%</div>
+        <div class="kpi-sub">Ø£ÙÙ ÙÙ ${RISK}%</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label">المواد المحللة</div>
+        <div class="kpi-label">Ø§ÙÙÙØ§Ø¯ Ø§ÙÙØ­ÙÙØ©</div>
         <div class="kpi-val" style="color:var(--purple)">${subjectStats.length}</div>
-        <div class="kpi-sub">${quarterFilter || 'كل الأرباع'}</div>
+        <div class="kpi-sub">${quarterFilter || 'ÙÙ Ø§ÙØ£Ø±Ø¨Ø§Ø¹'}</div>
       </div>
     </div>
 
     <!-- Charts -->
     <div class="charts-grid">
       <div class="chart-card">
-        <div class="card-title">أداء المواد ${quarterFilter ? '('+quarterFilter+')' : '(متوسط الأرباع)'}</div>
+        <div class="card-title">Ø£Ø¯Ø§Ø¡ Ø§ÙÙÙØ§Ø¯ ${quarterFilter ? '('+quarterFilter+')' : '(ÙØªÙØ³Ø· Ø§ÙØ£Ø±Ø¨Ø§Ø¹)'}</div>
         <div class="chart-wrap"><canvas id="subjectChart"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="card-title">توزيع التقديرات</div>
+        <div class="card-title">ØªÙØ²ÙØ¹ Ø§ÙØªÙØ¯ÙØ±Ø§Øª</div>
         <div class="chart-wrap"><canvas id="gradeDistChart"></canvas></div>
       </div>
     </div>
@@ -351,22 +367,22 @@ function render(students, subjectFilter, quarterFilter) {
     <!-- Quarters comparison chart (shown only when no specific quarter selected) -->
     ${!quarterFilter && !subjectFilter && subjectStats.length > 0 ? `
     <div class="chart-card" style="margin-bottom:24px">
-      <div class="card-title">مقارنة الأرباع (Q1–Q4) لكل مادة</div>
+      <div class="card-title">ÙÙØ§Ø±ÙØ© Ø§ÙØ£Ø±Ø¨Ø§Ø¹ (Q1âQ4) ÙÙÙ ÙØ§Ø¯Ø©</div>
       <div class="chart-wrap" style="height:${Math.max(220, subjectStats.length*40)}px"><canvas id="quartersChart"></canvas></div>
     </div>` : ''}
 
     <!-- Subject table -->
-    <div class="section-title">تحليل المواد</div>
+    <div class="section-title">ØªØ­ÙÙÙ Ø§ÙÙÙØ§Ø¯</div>
     <div class="table-card">
       <table>
         <thead><tr>
-          <th>المادة</th>
+          <th>Ø§ÙÙØ§Ø¯Ø©</th>
           <th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th>
-          <th>المتوسط</th><th>الحالة</th><th>التقدم</th>
+          <th>Ø§ÙÙØªÙØ³Ø·</th><th>Ø§ÙØ­Ø§ÙØ©</th><th>Ø§ÙØªÙØ¯Ù</th>
         </tr></thead>
         <tbody>
           ${subjectStats.map(s => {
-            const [q1,q2,q3,q4] = s.qAvgs.map(v => isNaN(v)?'—':v.toFixed(1)+'%')
+            const [q1,q2,q3,q4] = s.qAvgs.map(v => isNaN(v)?'â':v.toFixed(1)+'%')
             const c = clr(s.avg)
             return `<tr>
               <td style="font-weight:700">${s.name}</td>
@@ -386,10 +402,10 @@ function render(students, subjectFilter, quarterFilter) {
     <!-- Grade + Stage tables -->
     <div class="grid-2">
       <div>
-        <div class="section-title">أداء الصفوف</div>
+        <div class="section-title">Ø£Ø¯Ø§Ø¡ Ø§ÙØµÙÙÙ</div>
         <div class="table-card">
           <table>
-            <thead><tr><th>الصف</th><th>الطلاب</th><th>المتوسط</th></tr></thead>
+            <thead><tr><th>Ø§ÙØµÙ</th><th>Ø§ÙØ·ÙØ§Ø¨</th><th>Ø§ÙÙØªÙØ³Ø·</th></tr></thead>
             <tbody>
               ${gradeStats.map(g => `<tr>
                 <td style="font-weight:700">${g.name}</td>
@@ -401,16 +417,16 @@ function render(students, subjectFilter, quarterFilter) {
         </div>
       </div>
       <div>
-        <div class="section-title">أداء المراحل</div>
+        <div class="section-title">Ø£Ø¯Ø§Ø¡ Ø§ÙÙØ±Ø§Ø­Ù</div>
         <div class="table-card">
           <table>
-            <thead><tr><th>المرحلة</th><th>الطلاب</th><th>المتوسط</th></tr></thead>
+            <thead><tr><th>Ø§ÙÙØ±Ø­ÙØ©</th><th>Ø§ÙØ·ÙØ§Ø¨</th><th>Ø§ÙÙØªÙØ³Ø·</th></tr></thead>
             <tbody>
               ${stageStats.length ? stageStats.map(g => `<tr>
                 <td style="font-weight:700">${g.name}</td>
                 <td>${g.count}</td>
                 <td style="font-weight:800;color:${clr(g.avg)}">${g.avg.toFixed(1)}%</td>
-              </tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim);text-align:center">لا توجد بيانات مراحل</td></tr>'}
+              </tr>`).join('') : '<tr><td colspan="3" style="color:var(--dim);text-align:center">ÙØ§ ØªÙØ¬Ø¯ Ø¨ÙØ§ÙØ§Øª ÙØ±Ø§Ø­Ù</td></tr>'}
             </tbody>
           </table>
         </div>
