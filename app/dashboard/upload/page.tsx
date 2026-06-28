@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import React, { useState, CSSProperties } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -157,13 +157,13 @@ export default function UploadPage() {
     finally{setLoading(false)}
   }
 
-  const pg:React.CSSProperties={minHeight:'100vh',background:'var(--bg)',padding:'32px 20px',direction:'rtl'}
-  const panel:React.CSSProperties={background:'var(--panel)',border:'1px solid var(--line)',borderRadius:16,padding:28,marginBottom:20}
-  const errBox:React.CSSProperties={background:'rgba(248,113,113,.12)',border:'1px solid #f87171',color:'#f87171',borderRadius:10,padding:'12px 16px',fontSize:13,marginBottom:16}
-  const btn:React.CSSProperties={background:'linear-gradient(135deg,#5b8cff,#7c5cff)',color:'#fff',border:'none',borderRadius:12,padding:'13px 32px',fontSize:15,fontWeight:700,cursor:'pointer',width:'100%',marginTop:16,fontFamily:'inherit'}
-  const inp:React.CSSProperties={width:'100%',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:10,padding:'12px 16px',fontSize:14,color:'var(--txt)',fontFamily:'inherit',boxSizing:'border-box',marginBottom:12}
-  const tag:React.CSSProperties={display:'inline-block',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:6,padding:'2px 9px',fontSize:11,margin:'2px',color:'var(--txt-dim)'}
-  const statBox:React.CSSProperties={background:'var(--bg)',borderRadius:10,padding:'14px 16px'}
+  const pg:CSSProperties={minHeight:'100vh',background:'var(--bg)',padding:'32px 20px',direction:'rtl'}
+  const panel:CSSProperties={background:'var(--panel)',border:'1px solid var(--line)',borderRadius:16,padding:28,marginBottom:20}
+  const errBox:CSSProperties={background:'rgba(248,113,113,.12)',border:'1px solid #f87171',color:'#f87171',borderRadius:10,padding:'12px 16px',fontSize:13,marginBottom:16}
+  const btn:CSSProperties={background:'linear-gradient(135deg,#5b8cff,#7c5cff)',color:'}fff',border:'none',borderRadius:12,padding:'13px 32px',fontSize:15,fontWeight:700,cursor:'pointer',width:'100%',marginTop:16,fontFamily:'inherit'}
+  const inp:CSSProperties={width:'100%',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:10,padding:'12px 16px',fontSize:14,color:'var(--txt)',fontFamily:'inherit',boxSizing:'border-box',marginBottom:12}
+  const tag:CSSProperties={display:'inline-block',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:6,padding:'2px 9px',fontSize:11,margin:'2px',color:'var(--txt-dim)'}
+  const statBox:CSSProperties={background:'var(--bg)',borderRadius:10,padding:'14px 16px'}
 
   if (success) return (
     <div style={{...pg,display:'grid',placeItems:'center'}}>
@@ -185,7 +185,7 @@ export default function UploadPage() {
         <div style={panel}>
           <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 1 — جهّز Google Sheet</h3>
           <div style={{background:'var(--bg)',borderRadius:10,padding:'14px 16px',fontSize:13,color:'var(--txt-dim)',lineHeight:2.2}}>
-            <div>📋 <strong style={{color:'var(--txt)'}}>نسخ القالظ:</strong> <a href="https://docs.google.com/spreadsheets/d/1example/copy" target="_blank" rel="noreferrer" style={{color:'#5b8cff'}}>انقر هنا لنسخ قالب راصد</a></div>
+            <div>📋 <strong style={{color:'var(--txt)'}}>نسخ القالب:</strong> <a href="https://docs.google.com/spreadsheets/d/1example/copy" target="_blank" rel="noreferrer" style={{color:'#5b8cff'}}>انقر هنا لنسخ قالب راصد</a></div>
             <div>👁 <strong style={{color:'var(--txt)'}}>المشاركة:</strong> File → Share → Anyone with the link → Viewer</div>
             <div>📊 <strong style={{color:'var(--txt)'}}>التابات المطلوبة:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
           </div>
