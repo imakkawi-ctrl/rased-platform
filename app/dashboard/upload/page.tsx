@@ -1,6 +1,5 @@
 'use client'
 import React, { useState, CSSProperties } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface StudentRecord {
@@ -40,7 +39,7 @@ function parseCSV(text: string): Record<string, string>[] {
 function parseGradesSheet(rows: Record<string, any>[]): Pick<ParsedData,'students'|'subjects'|'meta'> {
   const allKeys     = Object.keys(rows[0] || {})
   const subjectCols = allKeys.filter(k => /^.+-Q[1-4]$/i.test(k.trim()))
-  if (!subjectCols.length) throw new Error('لم تجد أعمدة المواد — تأكد من ال تنسيق:"Math-Q1"')
+  if (!subjectCols.length) throw new Error('لم تجد أعمدة المواد — تأكد من التنسيق: "Math-Q1"')
   const subjects     = Array.from(new Set(subjectCols.map(k => k.replace(/-Q[1-4]$/i,'').trim())))
   const uniqueGrades = Array.from(new Set(rows.map((r:any)=>String(r['Grade']||r['grade']||'').trim()).filter(Boolean)))
   const uniqueSem    = Array.from(new Set(rows.map((r:any)=>String(r['Semester']||r['semester']||'').trim()).filter(Boolean)))
@@ -80,7 +79,7 @@ function parseTeachersSheet(rows: Record<string,any>[]): TeacherRecord[] {
 
 function parseTargetsSheet(rows: Record<string,any>[]): TargetRecord[] {
   if (!rows?.length) return []
-  return rows.map((r:any) =>({
+  return rows.map((r:any)=>({
     subject:String(r['Subject']||r['subject']||'').trim(),
     target:Number(r['Target (%)']||r['Target']||r['target']||80),
     year:String(r['Academic Year']||'').trim(),
@@ -103,13 +102,13 @@ async function fetchSheetCSV(id: string, sheetName: string): Promise<Record<stri
 
 async function parseGoogleSheet(url: string): Promise<ParsedData> {
   const id = extractSheetId(url)
-  if (!id) throw new Error('رابط Google Sheets غير — صحي')
+  if (!id) throw new Error('رابط Google Sheets غير صحيح')
   const [gradesRows, teachersRows, targetsRows] = await Promise.all([
     fetchSheetCSV(id, 'Grades'),
     fetchSheetCSV(id, 'Teachers'),
     fetchSheetCSV(id, 'Targets'),
   ])
-  if (!gradesRows.length) throw new Error('تأكد أن الشيت مشارك (Anyone with the link) with ان تاب Grades موجوا')
+  if (!gradesRows.length) throw new Error('تأكد أن الشيت مشارك (Anyone with the link) وأن تاب Grades موجود')
   const gradeData = parseGradesSheet(gradesRows)
   const teachers  = parseTeachersSheet(teachersRows)
   const targets   = parseTargetsSheet(targetsRows)
@@ -162,8 +161,8 @@ export default function UploadPage() {
     <div style={{...pg,display:'grid',placeItems:'center'}}>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:72,marginBottom:20}}>✅</div>
-        <h2 style={{fontSize:22,fontWeight:800,marginBottom:8}}>تم رفع ال بيانات بنجاح!</h2>
-        <p style={{color:'var(--txt-dim)'}}>جارٍ الانتياٌ...</p>
+        <h2 style={{fontSize:22,fontWeight:800,marginBottom:8}}>تم رفع البيانات بنجاح!</h2>
+        <p style={{color:'var(--txt-dim)'}}>جارٍ الانتقال...</p>
       </div>
     </div>
   )
@@ -171,20 +170,20 @@ export default function UploadPage() {
   return (
     <div style={pg}>
       <div style={{maxWidth:780,margin:'0 auto'}}>
-        <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>← {العودة</button>
+        <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>← العودة</button>
         <h1 style={{fontSize:24,fontWeight:800,marginBottom:4}}>رفع بيانات الطلاب</h1>
-        <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>ربƷ meg Google Sheets — الصق رابط الصيت aدناه</p>
+        <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>ربط مص Google Sheets — الصق رابط الشيت أدهاه</p>
 
         <div style={panel}>
           <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 1 — جهّز Google Sheet</h3>
           <div style={{background:'var(--bg)',borderRadius:10,padding:'14px 16px',fontSize:13,color:'var(--txt-dim)',lineHeight:2.2}}>
             <div>👁 <strong style={{color:'var(--txt)'}}>المشاركة:</strong> File → Share → Anyone with the link → Viewer</div>
-            <div>📊 <strong style={{color:'var(--txt)'}}>التابا֪ ال مطلوب:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
+            <div>📊 <strong style={{color:'var(--txt)'}}>التابات المطلوبة:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
           </div>
         </div>
 
         <div style={panel}>
-          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 2 — الصق رابط ال شيت</h3>
+          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 2 — الصق رابط الشيت</h3>
           {error && <div style={errBox}>⚠️ {error}</div>}
           <input
             style={inp}
@@ -200,7 +199,7 @@ export default function UploadPage() {
 
         {parsed && (
           <div style={panel}>
-            <h3 style={{fontSize:16,fontWeight:700,marginBottom:16}}>معاينة البيانا֪ ✅</h3>
+            <h3 style={{fontSize:16,fontWeight:700,marginBottom:16}}>مؼاينة البيانات ✅</h3>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
               <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>الطلاب</div><div style={{fontSize:26,fontWeight:800,color:'#5b8cff'}}>{parsed.students.length}</div></div>
               <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>المواد</div><div style={{fontSize:26,fontWeight:800,color:'#7c5cff'}}>{parsed.subjects.length}</div></div>
