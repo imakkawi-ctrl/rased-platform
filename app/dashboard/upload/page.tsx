@@ -40,7 +40,7 @@ function parseCSV(text: string): Record<string, string>[] {
 function parseGradesSheet(rows: Record<string, any>[]): Pick<ParsedData,'students'|'subjects'|'meta'> {
   const allKeys     = Object.keys(rows[0] || {})
   const subjectCols = allKeys.filter(k => /^.+-Q[1-4]$/i.test(k.trim()))
-  if (!subjectCols.length) throw new Error('ÙÙ ØªØ¬Ø¯ Ø£Ø¹ÙØ¯Ø© Ø§ÙÙÙØ§Ø¯ â ØªØ£ÙØ¯ ÙÙ Ø§ÙØªÙØ³ÙÙ: "Math-Q1"')
+  if (!subjectCols.length) throw new Error('لم تجد أعمدة المواد — تأكد من ال تنسيق:"Math-Q1"')
   const subjects     = Array.from(new Set(subjectCols.map(k => k.replace(/-Q[1-4]$/i,'').trim())))
   const uniqueGrades = Array.from(new Set(rows.map((r:any)=>String(r['Grade']||r['grade']||'').trim()).filter(Boolean)))
   const uniqueSem    = Array.from(new Set(rows.map((r:any)=>String(r['Semester']||r['semester']||'').trim()).filter(Boolean)))
@@ -62,7 +62,7 @@ function parseGradesSheet(rows: Record<string, any>[]): Pick<ParsedData,'student
     }
     return {name,grade,class:cls,stage,semester,year,school,grades}
   }).filter(s=>s.name)
-  if (!students.length) throw new Error('ÙØ§ ÙÙØ¬Ø¯ Ø·ÙØ§Ø¨ â ØªØ£ÙØ¯ ÙÙ Ø¹ÙÙØ¯ Name')
+  if (!students.length) throw new Error('لا يوجد طلاب — تأكد من عمود Name')
   return {students,subjects,meta:{semester:uniqueSem[0],year:rows[0]?.['Academic Year']||'',grades:uniqueGrades}}
 }
 
@@ -80,7 +80,7 @@ function parseTeachersSheet(rows: Record<string,any>[]): TeacherRecord[] {
 
 function parseTargetsSheet(rows: Record<string,any>[]): TargetRecord[] {
   if (!rows?.length) return []
-  return rows.map((r:any)=>({
+  return rows.map((r:any) =>({
     subject:String(r['Subject']||r['subject']||'').trim(),
     target:Number(r['Target (%)']||r['Target']||r['target']||80),
     year:String(r['Academic Year']||'').trim(),
@@ -103,13 +103,13 @@ async function fetchSheetCSV(id: string, sheetName: string): Promise<Record<stri
 
 async function parseGoogleSheet(url: string): Promise<ParsedData> {
   const id = extractSheetId(url)
-  if (!id) throw new Error('Ø±Ø§Ø¨Ø· Google Sheets ØºÙØ± ØµØ­ÙØ­')
+  if (!id) throw new Error('رابط Google Sheets غير — صحي')
   const [gradesRows, teachersRows, targetsRows] = await Promise.all([
     fetchSheetCSV(id, 'Grades'),
     fetchSheetCSV(id, 'Teachers'),
     fetchSheetCSV(id, 'Targets'),
   ])
-  if (!gradesRows.length) throw new Error('ØªØ£ÙØ¯ Ø£Ù Ø§ÙØ´ÙØª ÙØ´Ø§Ø±Ù (Anyone with the link) ÙØ£Ù ØªØ§Ø¨ Grades ÙÙØ¬ÙØ¯')
+  if (!gradesRows.length) throw new Error('تأكد أن الشيت مشارك (Anyone with the link) with ان تاب Grades موجوا')
   const gradeData = parseGradesSheet(gradesRows)
   const teachers  = parseTeachersSheet(teachersRows)
   const targets   = parseTargetsSheet(targetsRows)
@@ -123,7 +123,7 @@ export default function UploadPage() {
   const [success,setSuccess]   = useState(false)
   const [parsed,setParsed]     = useState<ParsedData|null>(null)
   const [fetching,setFetching] = useState(false)
-  const router   = useRouter()
+  const router = useRouter()
 
   async function handleFetch() {
     if (!url.trim()) return
@@ -146,14 +146,14 @@ export default function UploadPage() {
       if (!r.ok) throw new Error(data.error || 'فشل الحفظ')
       setSuccess(true)
       setTimeout(()=>router.push('/dashboard/analytics'),1500)
-    }catch(e:any){setError(e.message)}
-    finally{setLoading(false)}
+    } catch(e:any) { setError(e.message) }
+    finally { setLoading(false) }
   }
 
   const pg:CSSProperties={minHeight:'100vh',background:'var(--bg)',padding:'32px 20px',direction:'rtl'}
   const panel:CSSProperties={background:'var(--panel)',border:'1px solid var(--line)',borderRadius:16,padding:28,marginBottom:20}
   const errBox:CSSProperties={background:'rgba(248,113,113,.12)',border:'1px solid #f87171',color:'#f87171',borderRadius:10,padding:'12px 16px',fontSize:13,marginBottom:16}
-  const btn:CSSProperties={background:'linear-gradient(135deg,#5b8cff,#7c5cff)',color:'}fff',border:'none',borderRadius:12,padding:'13px 32px',fontSize:15,fontWeight:700,cursor:'pointer',width:'100%',marginTop:16,fontFamily:'inherit'}
+  const btn:CSSProperties={background:'linear-gradient(135deg,#5b8cff,#7c5cff)',color:'#fff',border:'none',borderRadius:12,padding:'13px 32px',fontSize:15,fontWeight:700,cursor:'pointer',width:'100%',marginTop:16,fontFamily:'inherit'}
   const inp:CSSProperties={width:'100%',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:10,padding:'12px 16px',fontSize:14,color:'var(--txt)',fontFamily:'inherit',boxSizing:'border-box',marginBottom:12}
   const tag:CSSProperties={display:'inline-block',background:'var(--bg)',border:'1px solid var(--line)',borderRadius:6,padding:'2px 9px',fontSize:11,margin:'2px',color:'var(--txt-dim)'}
   const statBox:CSSProperties={background:'var(--bg)',borderRadius:10,padding:'14px 16px'}
@@ -161,9 +161,9 @@ export default function UploadPage() {
   if (success) return (
     <div style={{...pg,display:'grid',placeItems:'center'}}>
       <div style={{textAlign:'center'}}>
-        <div style={{fontSize:72,marginBottom:20}}>&#x2705;</div>
-        <h2 style={{fontSize:22,fontWeight:800,marginBottom:8}}>ØªÙ Ø±ÙØ¹ Ø§ÙØ¨ÙØ§ÙØ§Øª Ø¨ÙØ¬Ø§Ø­!</h2>
-        <p style={{color:'var(--txt-dim)'}}>Ø¬Ø§Ø±Ù Ø§ÙØ§ÙØªÙØ§Ù...</p>
+        <div style={{fontSize:72,marginBottom:20}}>✅</div>
+        <h2 style={{fontSize:22,fontWeight:800,marginBottom:8}}>تم رفع ال بيانات بنجاح!</h2>
+        <p style={{color:'var(--txt-dim)'}}>جارٍ الانتياٌ...</p>
       </div>
     </div>
   )
@@ -171,22 +171,21 @@ export default function UploadPage() {
   return (
     <div style={pg}>
       <div style={{maxWidth:780,margin:'0 auto'}}>
-        <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>â Ø§ÙØ¹ÙØ¯Ø©</button>
-        <h1 style={{fontSize:24,fontWeight:800,marginBottom:4}}>Ø±ÙØ¹ Ø¨ÙØ§ÙØ§Øª Ø§ÙØ·ÙØ§Ø¨</h1>
-        <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>Ø±Ø¨Ø· ÙØ¹ Google Sheets â Ø§ÙØµÙ Ø±Ø§Ø¨Ø· Ø§ÙØ´ÙØª Ø£Ø¯ÙØ§Ù</p>
+        <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>← {العودة</button>
+        <h1 style={{fontSize:24,fontWeight:800,marginBottom:4}}>رفع بيانات الطلاب</h1>
+        <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>ربƷ meg Google Sheets — الصق رابط الصيت aدناه</p>
 
         <div style={panel}>
-          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>Ø§ÙØ®Ø·ÙØ© 1 â Ø¬ÙÙØ² Google Sheet</h3>
+          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 1 — جهّز Google Sheet</h3>
           <div style={{background:'var(--bg)',borderRadius:10,padding:'14px 16px',fontSize:13,color:'var(--txt-dim)',lineHeight:2.2}}>
-            <div>ð <strong style={{color:'var(--txt)'}}>ÙØ³Ø® Ø§ÙÙØ§ÙØ¨:</strong> <a href="https://docs.google.com/spreadsheets/d/1example/copy" target="_blank" rel="noreferrer" style={{color:'#5b8cff'}}>Ø§ÙÙØ± ÙÙØ§ ÙÙØ³Ø® ÙØ§ÙØ¨ Ø±Ø§ØµØ¯</a></div>
-            <div>ð <strong style={{color:'var(--txt)'}}>Ø§ÙÙØ´Ø§Ø±ÙØ©:</strong> File â Share â Anyone with the link â Viewer</div>
-            <div>ð <strong style={{color:'var(--txt)'}}>Ø§ÙØªØ§Ø¨Ø§Øª Ø§ÙÙØ·ÙÙØ¨Ø©:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
+            <div>👁 <strong style={{color:'var(--txt)'}}>المشاركة:</strong> File → Share → Anyone with the link → Viewer</div>
+            <div>📊 <strong style={{color:'var(--txt)'}}>التابا֪ ال مطلوب:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
           </div>
         </div>
 
         <div style={panel}>
-          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>Ø§ÙØ®Ø·ÙØ© 2 â Ø§ÙØµÙ Ø±Ø§Ø¨Ø· Ø§ÙØ´ÙØª</h3>
-          {error && <div style={errBox}>â ï¸ {error}</div>}
+          <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 2 — الصق رابط ال شيت</h3>
+          {error && <div style={errBox}>⚠️ {error}</div>}
           <input
             style={inp}
             placeholder="https://docs.google.com/spreadsheets/d/..."
@@ -195,37 +194,37 @@ export default function UploadPage() {
             onKeyDown={e=>e.key==='Enter'&&handleFetch()}
           />
           <button style={{...btn,marginTop:0,opacity:fetching?0.7:1}} onClick={handleFetch} disabled={fetching||!url.trim()}>
-            {fetching ? 'â³ Ø¬Ø§Ø±Ù ÙØ±Ø§Ø¡Ø© Ø§ÙØ´ÙØª...' : 'ð ÙØ±Ø§Ø¡Ø© Ø§ÙØ¨ÙØ§ÙØ§Øª'}
+            {fetching ? '⏳ جارٍ قراءة الشيت...' : '🔗 قراءة البيانات'}
           </button>
         </div>
 
         {parsed && (
           <div style={panel}>
-            <h3 style={{fontSize:16,fontWeight:700,marginBottom:16}}>ÙØ¹Ø§ÙÙØ© Ø§ÙØ¨ÙØ§ÙØ§Øª â</h3>
+            <h3 style={{fontSize:16,fontWeight:700,marginBottom:16}}>معاينة البيانا֪ ✅</h3>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
-              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>Ø§ÙØ·ÙØ§Ø¨</div><div style={{fontSize:26,fontWeight:800,color:'#5b8cff'}}>{parsed.students.length}</div></div>
-              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>Ø§ÙÙÙØ§Ø¯</div><div style={{fontSize:26,fontWeight:800,color:'#7c5cff'}}>{parsed.subjects.length}</div></div>
-              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>Ø§ÙÙØ¹ÙÙÙÙ</div><div style={{fontSize:26,fontWeight:800,color:'#34d399'}}>{parsed.teachers.length}</div></div>
-              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>Ø§ÙØ£ÙØ¯Ø§Ù</div><div style={{fontSize:26,fontWeight:800,color:'#fbbf24'}}>{parsed.targets.length}</div></div>
+              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>الطلاب</div><div style={{fontSize:26,fontWeight:800,color:'#5b8cff'}}>{parsed.students.length}</div></div>
+              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>المواد</div><div style={{fontSize:26,fontWeight:800,color:'#7c5cff'}}>{parsed.subjects.length}</div></div>
+              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>المعلمون</div><div style={{fontSize:26,fontWeight:800,color:'#34d399'}}>{parsed.teachers.length}</div></div>
+              <div style={statBox}><div style={{fontSize:11,color:'var(--txt-dim)',fontWeight:700,marginBottom:4}}>الأهداف</div><div style={{fontSize:26,fontWeight:800,color:'#fbbf24'}}>{parsed.targets.length}</div></div>
             </div>
             <div style={{marginBottom:12}}>
-              <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>Ø§ÙÙÙØ§Ø¯:</p>
+              <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>المواد:</p>
               <div>{parsed.subjects.map(s=><span key={s} style={tag}>{s}</span>)}</div>
             </div>
             {parsed.teachers.length>0&&(
               <div style={{marginBottom:12}}>
-                <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>Ø§ÙÙØ¹ÙÙÙÙ:</p>
+                <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>المعلمون:</p>
                 <div>{parsed.teachers.map(t=><span key={t.name+t.subject} style={{...tag,color:'#34d399',borderColor:'#34d399'}}>{t.name} - {t.subject}</span>)}</div>
               </div>
             )}
             {parsed.targets.length>0&&(
               <div style={{marginBottom:14}}>
-                <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>Ø§ÙØ£ÙØ¯Ø§Ù:</p>
+                <p style={{fontSize:12,fontWeight:700,color:'var(--txt-dim)',marginBottom:6}}>الأهداف:</p>
                 <div>{parsed.targets.map(t=><span key={t.subject} style={{...tag,color:'#fbbf24',borderColor:'#fbbf24'}}>{t.subject}: {t.target}%</span>)}</div>
               </div>
             )}
             <button style={btn} onClick={handleUpload} disabled={loading}>
-              {loading ? 'Ø¬Ø§Ø±Ù Ø§ÙØ­ÙØ¸...' : `Ø­ÙØ¸ ${parsed.students.length} Ø·Ø§ÙØ¨ ÙÙØªØ­ Ø§ÙØªØ­ÙÙÙ`}
+              {loading ? 'جارٍ الحفظ...' : `حفظ ${parsed.students.length} طالب وفتح التحليل`}
             </button>
           </div>
         )}
