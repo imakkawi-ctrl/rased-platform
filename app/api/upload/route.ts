@@ -8,17 +8,20 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('user_profiles')
-      .select('school_id').eq('id', user.id).single()
-    const schoolId = profile?.school_id
-    if (!schoolId) return NextResponse.json({ error: 'لم يتم تعيين مدرسة لهذا الحساب' }, { status: 400 })
-
     const admin = createAdmin(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { parsed } = await req.json()
+    // Use service role for profile lookup to bypass RLS
+    const { data: profile } = await admin.from('user_profiles')
+      .select('school_id').eq('id', user.id).single()
+    const schoolId = profile?.school_id
+    if (!schoolId) return NextResponse.json({ error: 'لم يتم تعيين مدرسة لهذا الحساب' }, { status: 400 })
+
+    const body = await req.json()
+    const parsed = body.parsed
+    const sheetUrl: string = body.sheetUrl || ''
 
     await admin.from('school_data').delete().eq('school_id', schoolId)
     const { error } = await admin.from('school_data').insert({
@@ -33,7 +36,9 @@ export async function POST(req: NextRequest) {
         risk: 60,
         defaultTarget: 80,
         teachers: parsed.teachers,
-        targets: parsed.targets
+        targets: parsed.targets,
+        sheetUrl: sheetUrl,
+        lastSync: new Date().toISOString(),
       }
     })
 
