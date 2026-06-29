@@ -1,6 +1,5 @@
 'use client'
 import React, { useState, CSSProperties } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 interface StudentRecord {
@@ -19,8 +18,7 @@ interface ParsedData {
 }
 
 function parseCSV(text: string): Record<string, string>[] {
-  const clean = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const lines = clean.trim().split('\n')
+  const lines = text.trim().split('\n')
   if (lines.length < 2) return []
   const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
   return lines.slice(1).map(line => {
@@ -38,26 +36,11 @@ function parseCSV(text: string): Record<string, string>[] {
   }).filter(r => Object.values(r).some(v => v))
 }
 
-function normKey(k: string): string {
-  return k.trim().replace(/\s+Q([1-4])$/i, '-Q$1').replace(/_Q([1-4])$/i, '-Q$1')
-}
-
-function detectSubjectCols(keys: string[]): string[] {
-  for (const re of [/^.+-Q[1-4]$/i, /^.+\sQ[1-4]$/i, /^.+_Q[1-4]$/i]) {
-    const cols = keys.filter(k => re.test(k.trim()))
-    if (cols.length) return cols
-  }
-  return []
-}
-
 function parseGradesSheet(rows: Record<string, any>[]): Pick<ParsedData,'students'|'subjects'|'meta'> {
   const allKeys     = Object.keys(rows[0] || {})
-  const rawCols     = detectSubjectCols(allKeys)
-  if (!rawCols.length) {
-    throw new Error('لم تجد أعمدة المواد. الأعمدة الموجودة: ' + allKeys.slice(0,8).join(', ') + ' — تأكد من التنسيق: Math-Q1')
-  }
-  const normCols = rawCols.map(normKey)
-  const subjects = Array.from(new Set(normCols.map(k => k.replace(/-Q[1-4]$/i,'').trim())))
+  const subjectCols = allKeys.filter(k => /^.+-Q[1-4]$/i.test(k.trim()))
+  if (!subjectCols.length) throw new Error('لم تجد أعمدة المواد — تأكد من التنسيق: "Math-Q1"')
+  const subjects     = Array.from(new Set(subjectCols.map(k => k.replace(/-Q[1-4]$/i,'').trim())))
   const uniqueGrades = Array.from(new Set(rows.map((r:any)=>String(r['Grade']||r['grade']||'').trim()).filter(Boolean)))
   const uniqueSem    = Array.from(new Set(rows.map((r:any)=>String(r['Semester']||r['semester']||'').trim()).filter(Boolean)))
   const students: StudentRecord[] = rows.map((r:any)=>{
@@ -72,8 +55,8 @@ function parseGradesSheet(rows: Record<string, any>[]): Pick<ParsedData,'student
     for (const subj of subjects) {
       grades[subj] = {}
       for (const q of ['Q1','Q2','Q3','Q4']) {
-        const origCol = rawCols.find(k => normKey(k) === `${subj}-${q}`)
-        if (origCol) { const v=r[origCol]; grades[subj][q]=(v===''||v==null)?NaN:Number(v) }
+        const col=subjectCols.find(k=>k.replace(/-Q[1-4]$/i,'').trim()===subj&&k.endsWith(`-${q}`))
+        if (col) { const v=r[col]; grades[subj][q]=(v===''||v==null)?NaN:Number(v) }
       }
     }
     return {name,grade,class:cls,stage,semester,year,school,grades}
@@ -89,7 +72,7 @@ function parseTeachersSheet(rows: Record<string,any>[]): TeacherRecord[] {
     const subject=String(r['Subject']||r['subject']||'').trim()
     const year=String(r['Academic Year']||'').trim()
     const sections:string[]=[]
-    for(let i=1;i<=15;i++){const v=String(r[`Section ${i}`]||'').trim();if(v)sections.push(v)}
+    for(let i=1;i<=10;i++){const v=String(r[`Section ${i}`]||'').trim();if(v)sections.push(v)}
     return {name,subject,sections,year}
   }).filter(t=>t.name&&t.subject)
 }
@@ -120,21 +103,11 @@ async function fetchSheetCSV(id: string, sheetName: string): Promise<Record<stri
 async function parseGoogleSheet(url: string): Promise<ParsedData> {
   const id = extractSheetId(url)
   if (!id) throw new Error('رابط Google Sheets غير صحيح')
-  let gradesRows: Record<string,string>[] = []
-  for (const n of ['Grades','grades','GRADES','Scores']) {
-    gradesRows = await fetchSheetCSV(id, n)
-    if (gradesRows.length) break
-  }
-  let teachersRows: Record<string,string>[] = []
-  for (const n of ['Teachers','teachers','المعلمون']) {
-    teachersRows = await fetchSheetCSV(id, n)
-    if (teachersRows.length) break
-  }
-  let targetsRows: Record<string,string>[] = []
-  for (const n of ['Targets','targets','الأهداف']) {
-    targetsRows = await fetchSheetCSV(id, n)
-    if (targetsRows.length) break
-  }
+  const [gradesRows, teachersRows, targetsRows] = await Promise.all([
+    fetchSheetCSV(id, 'Grades'),
+    fetchSheetCSV(id, 'Teachers'),
+    fetchSheetCSV(id, 'Targets'),
+  ])
   if (!gradesRows.length) throw new Error('تأكد أن الشيت مشارك (Anyone with the link) وأن تاب Grades موجود')
   const gradeData = parseGradesSheet(gradesRows)
   const teachers  = parseTeachersSheet(teachersRows)
@@ -149,8 +122,7 @@ export default function UploadPage() {
   const [success,setSuccess]   = useState(false)
   const [parsed,setParsed]     = useState<ParsedData|null>(null)
   const [fetching,setFetching] = useState(false)
-  const router   = useRouter()
-  const supabase = createClient()
+  const router = useRouter()
 
   async function handleFetch() {
     if (!url.trim()) return
@@ -164,20 +136,14 @@ export default function UploadPage() {
     if (!parsed) return
     setLoading(true); setError('')
     try {
-      // Verify auth first (client-side check only)
-      const {data:{user}} = await supabase.auth.getUser()
-      if (!user) { router.push('/auth/login'); return }
-
-      // Send to server-side API route (uses service role key — bypasses RLS)
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parsed, sheetUrl: url.trim() }),
       })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'فشل الحفظ')
+      if (!res.ok) throw new Error((await res.json()).error || 'فشل الرفع')
       setSuccess(true)
-      setTimeout(()=>router.push('/dashboard/analytics'), 1500)
+      setTimeout(() => router.push('/dashboard/analytics'), 1500)
     } catch(e:any) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -203,24 +169,22 @@ export default function UploadPage() {
   return (
     <div style={pg}>
       <div style={{maxWidth:780,margin:'0 auto'}}>
-        <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>
-          {'←'} العودة
-        </button>
+        <button style={{display:'inline-flex',alignItems:'center',gap:6,color:'var(--txt-dim)',fontSize:13,marginBottom:24,cursor:'pointer',background:'none',border:'none',padding:0,fontFamily:'inherit'}} onClick={()=>router.push('/dashboard')}>← العودة</button>
         <h1 style={{fontSize:24,fontWeight:800,marginBottom:4}}>رفع بيانات الطلاب</h1>
         <p style={{color:'var(--txt-dim)',fontSize:14,marginBottom:28}}>ربط مع Google Sheets — الصق رابط الشيت أدناه</p>
 
         <div style={panel}>
           <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 1 — جهّز Google Sheet</h3>
           <div style={{background:'var(--bg)',borderRadius:10,padding:'14px 16px',fontSize:13,color:'var(--txt-dim)',lineHeight:2.2}}>
-            <div>{'📋'} <strong style={{color:'var(--txt)'}}>تحميل القالب:</strong> <a href="/template.xlsx" download style={{color:'#5b8cff'}}>template.xlsx</a></div>
-            <div>{'👁'} <strong style={{color:'var(--txt)'}}>المشاركة:</strong> File {'→'} Share {'→'} Anyone with the link {'→'} Viewer</div>
-            <div>{'📊'} <strong style={{color:'var(--txt)'}}>التابات المطلوبة:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
+            <div>📋 <strong style={{color:'var(--txt)'}}>نسخ القالب:</strong> <a href="https://docs.google.com/spreadsheets/d/1example/copy" target="_blank" rel="noreferrer" style={{color:'#5b8cff'}}>انقر هنا لنسخ قالب راصد</a></div>
+            <div>👁 <strong style={{color:'var(--txt)'}}>المشاركة:</strong> File → Share → Anyone with the link → Viewer</div>
+            <div>📊 <strong style={{color:'var(--txt)'}}>التابات المطلوبة:</strong> <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Grades</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Teachers</code> + <code style={{background:'rgba(91,140,255,.1)',padding:'1px 6px',borderRadius:4}}>Targets</code></div>
           </div>
         </div>
 
         <div style={panel}>
           <h3 style={{fontSize:16,fontWeight:700,marginBottom:12}}>الخطوة 2 — الصق رابط الشيت</h3>
-          {error && <div style={errBox}>{'⚠️'} {error}</div>}
+          {error && <div style={errBox}>⚠️ {error}</div>}
           <input
             style={inp}
             placeholder="https://docs.google.com/spreadsheets/d/..."
