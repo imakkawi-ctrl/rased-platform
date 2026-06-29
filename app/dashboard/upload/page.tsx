@@ -204,7 +204,7 @@ export default function UploadPage() {
         school_id:schoolId, file_name:'google_sheet',
         headers:['name','grade','class','stage','semester','year',...parsed.subjects],
         rows:    parsed.students as any,
-        config:  {format:'v2',subjects:parsed.subjects,meta:parsed.meta,risk:60,defaultTarget:80,teachers:parsed.teachers,targets:parsed.targets},
+        config:  {format:'v2',subjects:parsed.subjects,meta:parsed.meta,risk:60,defaultTarget:80,teachers:parsed.teachers,targets:parsed.targets,sheetUrl:url},
       })
       if (dbErr) throw new Error(dbErr.message)
       setSuccess(true)
