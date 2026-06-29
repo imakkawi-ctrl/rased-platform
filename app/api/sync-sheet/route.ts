@@ -5,7 +5,6 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const SVC_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// ── CSV parser ────────────────────────────────────────────────────
 function parseCSV(text: string): Record<string, string>[] {
   const clean = text.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
   const lines = clean.trim().split('\n')
@@ -125,29 +124,39 @@ function buildTargets(rows: Record<string,string>[]) {
   })).filter(t => t.subject)
 }
 
-// ── Handler ───────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization') || ''
     const token = authHeader.replace('Bearer ', '')
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Auth with user token
+    // Verify user token
     const userSupa = createClient(SUPA_URL, SUPA_KEY)
     const { data: { user }, error: authErr } = await userSupa.auth.getUser(token)
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Get school_id — use service role to bypass RLS after we've verified the user token
-    const adminClient = createClient(SUPA_URL, SVC_KEY)
-    const { data: profile } = await adminClient.from('user_profiles')
+    // Use service role for ALL database reads — bypasses RLS entirely
+    const admin = createClient(SUPA_URL, SVC_KEY)
+
+    // Get school_id from user_profiles
+    const { data: profile } = await admin.from('user_profiles')
       .select('school_id').eq('id', user.id).single()
-    const schoolId = profile?.school_id
+    let schoolId = profile?.school_id
+
+    // Fallback: if no user_profiles row, school_id = user.id (direct schools table)
+    if (!schoolId) {
+      const { data: school } = await admin.from('schools').select('id').eq('id', user.id).single()
+      if (school) schoolId = user.id
+    }
+
     if (!schoolId) return NextResponse.json({ error: 'No school assigned to this account' }, { status: 400 })
 
-    // Get stored config with sheetUrl
-    const { data: rec } = await userSupa.from('school_data')
-      .select('config').eq('school_id', schoolId)
-      .order('created_at', { ascending: false }).limit(1).single()
+    // Get stored config — use service role to bypass RLS
+    const { data: rec } = await admin.from('school_data')
+      .select('config')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(1).single()
 
     const sheetUrl: string = rec?.config?.sheetUrl || ''
     if (!sheetUrl) return NextResponse.json({ error: 'No sheet URL stored — upload your sheet first' }, { status: 400 })
@@ -155,7 +164,6 @@ export async function POST(req: NextRequest) {
     const sheetId = extractSheetId(sheetUrl)
     if (!sheetId) return NextResponse.json({ error: 'Invalid sheet URL' }, { status: 400 })
 
-    // Fetch fresh CSV
     const { grades, teachers, targets } = await fetchAllTabs(sheetId)
     if (!grades.length) return NextResponse.json({ error: 'Could not fetch Grades tab — check sharing settings' }, { status: 400 })
 
@@ -167,20 +175,18 @@ export async function POST(req: NextRequest) {
     const uniqueSem    = Array.from(new Set(students.map(s => s.semester).filter(Boolean)))
 
     const newConfig = {
-      ...rec.config,
+      ...(rec?.config || {}),
       format: 'v2',
       subjects,
       teachers: teacherList,
       targets: targetList,
-      risk: rec.config?.risk || 60,
-      defaultTarget: rec.config?.defaultTarget || 80,
+      risk: rec?.config?.risk || 60,
+      defaultTarget: rec?.config?.defaultTarget || 80,
       meta: { semester: uniqueSem[0], year: students[0]?.year || '', grades: uniqueGrades },
       sheetUrl,
       lastSync: new Date().toISOString(),
     }
 
-    // Update Supabase with service key
-    const admin = createClient(SUPA_URL, SVC_KEY)
     await admin.from('school_data').delete().eq('school_id', schoolId)
     const { error: insertErr } = await admin.from('school_data').insert({
       school_id: schoolId,
