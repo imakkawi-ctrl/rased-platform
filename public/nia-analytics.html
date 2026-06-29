@@ -853,31 +853,30 @@ function onErr(err){var msg=(err&&err.message?err.message:err);setStatus('var(--
 async function loadData(force){
   setStatus('var(--warn)','…');
   try{
-    if(!force&&SUPABASE_CLIENT){var {data:{user}}=await SUPABASE_CLIENT.auth.getUser();if(!user){location.href='/';return;}}
+    // Restore auth session from URL hash (first load after login)
     var hash=new URLSearchParams(location.hash.slice(1));
     var at=hash.get('access_token'),rt=hash.get('refresh_token');
     SUPABASE_CLIENT=supabase.createClient(SUPABASE_URL,ANON_KEY);
     if(at){await SUPABASE_CLIENT.auth.setSession({access_token:at,refresh_token:rt});history.replaceState(null,'',location.pathname);}
-    var {data:{user}}=await SUPABASE_CLIENT.auth.getUser();
-    if(!user){location.href='/';return;}
-    var {data:profile}=await SUPABASE_CLIENT.from('user_profiles').select('school_id,role').eq('id',user.id).single();
-    var schoolId=profile&&profile.school_id;
-    if(!schoolId){onErr(new Error(LANG==='ar'?'لم يتم تعيين مدرسة لهذا الحساب':'No school assigned to this account'));return;}
-    USER_ROLE=profile&&profile.role||'';
-    var {data:schoolRec}=await SUPABASE_CLIENT.from('schools').select('name').eq('id',schoolId).single();
-    var schoolName=schoolRec&&schoolRec.name||'';
-    var {data:rec}=await SUPABASE_CLIENT.from('school_data').select('rows,config,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(1).single();
-    if(!rec||!rec.rows||!rec.rows.length){onErr(new Error(LANG==='ar'?'لا توجد بيانات — قم برفع بيانات الطلاب أولاً':'No data uploaded yet'));return;}
-    onData({rows:rec.rows,config:rec.config||{},schoolName:schoolName});
+    var {data:{session}}=await SUPABASE_CLIENT.auth.getSession();
+    if(!session){location.href='/auth/login';return;}
+    // Fetch school data via API route (service role — bypasses RLS, always works after re-login)
+    var apiRes=await fetch('/api/get-school-data',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
+    if(!apiRes.ok){
+      if(apiRes.status===401){location.href='/auth/login';return;}
+      var errData=await apiRes.json();
+      onErr(new Error(errData.error||'فشل تحميل البيانات'));return;
+    }
+    var data=await apiRes.json();
+    USER_ROLE=data.role||'';
+    if(!data.rows||!data.rows.length){onErr(new Error(LANG==='ar'?'لا توجد بيانات — قم برفع بيانات الطلاب أولاً':'No data uploaded yet'));return;}
+    onData({rows:data.rows,config:data.config||{},schoolName:data.schoolName||''});
     // Background sync from Google Sheets (non-blocking)
-    if(rec.config&&rec.config.sheetUrl){
-      var {data:{session}}=await SUPABASE_CLIENT.auth.getSession();
-      if(session&&!force){
-        fetch('/api/sync-sheet',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}})
-          .then(function(r){return r.ok?r.json():null;})
-          .then(function(d){if(d&&d.success)setSyncBadge(d.lastSync);})
-          .catch(function(){});
-      }
+    if(data.config&&data.config.sheetUrl&&!force){
+      fetch('/api/sync-sheet',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}})
+        .then(function(r){return r.ok?r.json():null;})
+        .then(function(d){if(d&&d.success)setSyncBadge(d.lastSync);})
+        .catch(function(){});
     }
   }catch(err){onErr(err);}
 }
