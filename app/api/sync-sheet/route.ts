@@ -137,11 +137,12 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: authErr } = await userSupa.auth.getUser(token)
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Get school_id
-    const { data: profile } = await userSupa.from('user_profiles')
+    // Get school_id — use service role to bypass RLS after we've verified the user token
+    const adminClient = createClient(SUPA_URL, SVC_KEY)
+    const { data: profile } = await adminClient.from('user_profiles')
       .select('school_id').eq('id', user.id).single()
     const schoolId = profile?.school_id
-    if (!schoolId) return NextResponse.json({ error: 'No school assigned' }, { status: 400 })
+    if (!schoolId) return NextResponse.json({ error: 'No school assigned to this account' }, { status: 400 })
 
     // Get stored config with sheetUrl
     const { data: rec } = await userSupa.from('school_data')
