@@ -46,20 +46,23 @@ export default async function DashboardPage() {
           {"أهلاً، "}{school?.name || user!.email}
         </h1>
         <p style={{ color:"var(--txt-dim)", marginBottom:28, fontSize:14 }}>
-          {isManager ? 'لديك صلاحية رفع البيانات وعرض التحليل' : 'لديك صلاحية عرض التحليل فقط'}
+          {isManager ? 'لديك صلاحية رفع البيانات وعرض التحليل وإدارة المشرفين' : 'لديك صلاحية عرض التحليل فقط'}
         </p>
 
         <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:32 }}>
+          <Link href="/dashboard/analytics"
+            style={{ background:"linear-gradient(135deg,#5b8cff,#7c5cff)", color:"#fff", padding:"12px 24px", borderRadius:11, fontWeight:700, fontSize:14, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:8, opacity: hasData ? 1 : 0.6 }}>
+            {"📊 فتح لوحة التحليل"}{!hasData ? " (لا توجد بيانات)" : ""}
+          </Link>
           {isManager && (
-            <Link href="/dashboard/upload" style={{ background:"linear-gradient(135deg,#5b8cff,#7c5cff)", color:"#fff", padding:"12px 24px", borderRadius:11, fontWeight:700, fontSize:14, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:8 }}>
+            <Link href="/dashboard/upload"
+              style={{ background:"var(--panel)", border:"1px solid var(--line)", color:"var(--txt)", padding:"12px 24px", borderRadius:11, fontWeight:700, fontSize:14, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:8 }}>
               📤 رفع البيانات
             </Link>
           )}
-          <Link
-            href="/dashboard/analytics"
-            style={{ background:"var(--panel)", border:"1px solid var(--line)", color:"var(--txt)", padding:"12px 24px", borderRadius:11, fontWeight:700, fontSize:14, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:8, opacity: hasData ? 1 : 0.5, pointerEvents: hasData ? "auto" : "none" }}
-          >
-            {"📊 فتح لوحة التحليل"}{!hasData ? " (لا توجد بيانات)" : ""}
+          <Link href="/dashboard/settings"
+            style={{ background:"var(--panel)", border:"1px solid var(--line)", color:"var(--txt)", padding:"12px 24px", borderRadius:11, fontWeight:700, fontSize:14, textDecoration:"none", display:"inline-flex", alignItems:"center", gap:8 }}>
+            ⚙️ إعدادات المدرسة
           </Link>
         </div>
 
@@ -80,30 +83,11 @@ export default async function DashboardPage() {
           </div>
           <div style={{ background:"var(--panel)", border:"1px solid var(--line)", borderRadius:14, padding:"22px" }}>
             <div style={{ fontSize:11, color:"var(--txt-dim)", fontWeight:700, marginBottom:8 }}>الصلاحية</div>
-            <div style={{ fontSize:14, fontWeight:800 }}>{isManager ? "مدير (رفع + تحليل)" : "مشرف (تحليل فقط)"}</div>
+            <div style={{ fontSize:14, fontWeight:800 }}>{isManager ? "مدير (رفع + تحليل + إدارة)" : "مشرف (تحليل فقط)"}</div>
             <div style={{ fontSize:11, color:"var(--txt-dim)", marginTop:4 }}>{user!.email}</div>
           </div>
         </div>
 
-        <div style={{ background:"var(--panel)", border:"1px solid var(--line)", borderRadius:16, padding:"24px" }}>
-          <h2 style={{ fontSize:16, fontWeight:700, marginBottom:14 }}>
-            {isManager ? "طريقة الاستخدام" : "بإمكانك الاطلاع على"}
-          </h2>
-          {isManager ? (
-            <ol style={{ paddingRight:20, lineHeight:2.2, color:"var(--txt-dim)", fontSize:14 }}>
-              <li>{"حمّل قالب Excel من صفحة رفع البيانات"}</li>
-              <li>{"أضف بيانات الطلاب — صف واحد لكل طالب"}</li>
-              <li>{"اكتب أسماء المواد: Math-Q1 أو Arabic Language-Q2"}</li>
-              <li>ارفع الملف وافتح لوحة التحليل</li>
-            </ol>
-          ) : (
-            <ul style={{ paddingRight:20, lineHeight:2.2, color:"var(--txt-dim)", fontSize:14 }}>
-              <li>{"تحليل أداء الطلاب بالمواد والصفوف"}</li>
-              <li>{"مقارنة النتائج بين الأرباع Q1-Q4"}</li>
-              <li>قوائم الطلاب في خطر</li>
-            </ul>
-          )}
-        </div>
       </div>
     </div>
   )
