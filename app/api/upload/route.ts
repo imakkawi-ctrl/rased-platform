@@ -13,15 +13,30 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Use service role for profile lookup to bypass RLS
+    // Try user_profiles first (for supervisors linked to a school)
     const { data: profile } = await admin.from('user_profiles')
       .select('school_id').eq('id', user.id).single()
-    const schoolId = profile?.school_id
+
+    let schoolId: string = profile?.school_id || ''
+
+    // Fallback: schools.id = user.id (original system design)
+    if (!schoolId) {
+      const { data: schoolRow } = await admin.from('schools')
+        .select('id').eq('id', user.id).single()
+      if (schoolRow) schoolId = user.id
+    }
+
     if (!schoolId) return NextResponse.json({ error: 'لم يتم تعيين مدرسة لهذا الحساب' }, { status: 400 })
 
     const body = await req.json()
-    const parsed = body.parsed
+    const parsed   = body.parsed
     const sheetUrl: string = body.sheetUrl || ''
+
+    // Ensure user_profiles row exists (so re-login always works)
+    await admin.from('user_profiles').upsert(
+      { id: user.id, school_id: schoolId, role: 'manager' },
+      { onConflict: 'id' }
+    )
 
     await admin.from('school_data').delete().eq('school_id', schoolId)
     const { error } = await admin.from('school_data').insert({
@@ -31,14 +46,14 @@ export async function POST(req: NextRequest) {
       rows: parsed.students,
       config: {
         format: 'v2',
-        subjects: parsed.subjects,
-        meta: parsed.meta,
-        risk: 60,
-        defaultTarget: 80,
-        teachers: parsed.teachers,
-        targets: parsed.targets,
-        sheetUrl: sheetUrl,
-        lastSync: new Date().toISOString(),
+        subjects:     parsed.subjects,
+        meta:         parsed.meta,
+        risk:         60,
+        defaultTarget:80,
+        teachers:     parsed.teachers,
+        targets:      parsed.targets,
+        sheetUrl:     sheetUrl,
+        lastSync:     new Date().toISOString(),
       }
     })
 
