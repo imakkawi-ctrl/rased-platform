@@ -377,8 +377,15 @@ function ingestSupabase(p){
     if(subj&&!isNaN(tgt))TARGETS[subj]={any:tgt,byYear:{}};
   });
   function teacherFor(cls,subj){
-    var found=teachersRaw.find(function(o){return String(o.Class||o.class||'').trim()===cls&&String(o.Subject||o.subject||'').trim()===subj;});
-    return found?String(found.Teacher||found.teacher||'').trim():'';
+    // Supports new format {name,subject,sections:[]} and old {Class,Subject,Teacher}
+    var found=teachersRaw.find(function(o){
+      var sMatch=String(o.subject||o.Subject||'').trim()===subj;
+      var sects=o.sections||o.Sections||[];
+      if(sMatch&&Array.isArray(sects)&&sects.length)
+        return sects.some(function(s){return String(s).trim()===cls;});
+      return String(o.Class||o.class||'').trim()===cls&&String(o.Subject||o.subject||'').trim()===subj;
+    });
+    return found?String(found.Teacher||found.teacher||found.name||'').trim():'';
   }
   RECORDS=[];
   rows.forEach(function(row){
