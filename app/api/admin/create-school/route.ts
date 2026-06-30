@@ -15,69 +15,82 @@ function getServiceClient() {
 export async function POST(req: NextRequest) {
   // Verify caller is admin
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user || user.email !== ADMIN_EMAIL) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    )
   }
 
-  const { name, email, password, role, days } = await req.json()
+  const { name, email, password, days } = await req.json()
+
   if (!name || !email || !password) {
-    return NextResponse.json({ error: 'البيانات ناقصة' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'البيانات ناقصة' },
+      { status: 400 }
+    )
   }
 
   const admin = getServiceClient()
 
   // 1. Create auth user
-  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+  const {
+    data: authData,
+    error: authError,
+  } = await admin.auth.admin.createUser({
     email,
     password,
-    email_confirm: true, // skip email verification
+    email_confirm: true,
   })
-  if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
+
+  if (authError) {
+    return NextResponse.json(
+      { error: authError.message },
+      { status: 400 }
+    )
+  }
 
   const userId = authData.user?.id
-  if (!userId) return NextResponse.json({ error: 'لم يُنشأ المستخدم' }, { status: 500 })
 
-  // 2. Calculate license expiry
-  const expiry = new Date(Date.now() + Number(days || 365) * 86400000).toISOString().split('T')[0]
-
-  // 3. Insert into schools table
-const { error: dbError } = await admin.from('schools').insert({
-  id: userId,
-  name,
-  slug: null,
-  license_active: true,
-  plan: 'trial',
-  plan_expires_at: new Date(
-    Date.now() + Number(days || 365) * 86400000
-  ).toISOString(),
-  max_students: 300,
-})
-
-  if (dbError) {
-    // Rollback: delete the auth user
-    await admin.auth.admin.deleteUser(userId)
-    return NextResponse.json({ error: dbError.message }, { status: 500 })
+  if (!userId) {
+    return NextResponse.json(
+      { error: 'لم يُنشأ المستخدم' },
+      { status: 500 }
+    )
   }
-// 4. Create manager profile
-const { error: profileError } = await admin
-  .from('user_profiles')
-  .insert({
+
+  // 2. Insert school
+  const {
+    error: dbError,
+  } = await admin.from('schools').insert({
     id: userId,
-    school_id: userId,
-    role: 'manager',
-    email,
-    full_name: name,
+    name,
+    slug: null,
+    license_active: true,
+    plan: 'trial',
+    plan_expires_at: new Date(
+      Date.now() + Number(days || 365) * 86400000
+    ).toISOString(),
+    max_students: 300,
   })
 
-if (profileError) {
-  await admin.from('schools').delete().eq('id', userId)
-  await admin.auth.admin.deleteUser(userId)
+  if (dbError) {
+    // rollback auth user
+    await admin.auth.admin.deleteUser(userId)
 
-  return NextResponse.json(
-    { error: profileError.message },
-    { status: 500 }
-  )
-}
-  return NextResponse.json({ success: true, userId })
+    return NextResponse.json(
+      { error: dbError.message },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json({
+    success: true,
+    userId,
+  })
 }
