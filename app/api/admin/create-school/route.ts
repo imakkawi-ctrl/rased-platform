@@ -42,19 +42,42 @@ export async function POST(req: NextRequest) {
   const expiry = new Date(Date.now() + Number(days || 365) * 86400000).toISOString().split('T')[0]
 
   // 3. Insert into schools table
-  const { error: dbError } = await admin.from('schools').insert({
-    id: userId,
-    name,
-    email,
-    role: role || 'manager',
-    license_expiry: expiry,
-  })
+const { error: dbError } = await admin.from('schools').insert({
+  id: userId,
+  name,
+  slug: null,
+  license_active: true,
+  plan: 'trial',
+  plan_expires_at: new Date(
+    Date.now() + Number(days || 365) * 86400000
+  ).toISOString(),
+  max_students: 300,
+})
 
   if (dbError) {
     // Rollback: delete the auth user
     await admin.auth.admin.deleteUser(userId)
     return NextResponse.json({ error: dbError.message }, { status: 500 })
   }
+// 4. Create manager profile
+const { error: profileError } = await admin
+  .from('user_profiles')
+  .insert({
+    id: userId,
+    school_id: userId,
+    role: 'manager',
+    email,
+    full_name: name,
+  })
 
+if (profileError) {
+  await admin.from('schools').delete().eq('id', userId)
+  await admin.auth.admin.deleteUser(userId)
+
+  return NextResponse.json(
+    { error: profileError.message },
+    { status: 500 }
+  )
+}
   return NextResponse.json({ success: true, userId })
 }
